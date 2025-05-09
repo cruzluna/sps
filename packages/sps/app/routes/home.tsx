@@ -66,6 +66,31 @@ export default function Home() {
             </p>
           </div>
         </div>
+
+        <footer className="mt-16 mb-8 flex items-center justify-center font-['system-ui']">
+          <div className="flex items-center gap-4">
+            <a
+              href="https://www.cruzluna.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
+            >
+              cruzluna.dev
+            </a>
+            <a
+              href="https://x.com/nvimcruz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center"
+            >
+              <img
+                src="/x.svg"
+                alt="X (Twitter)"
+                className="w-5 h-5 dark:invert"
+              />
+            </a>
+          </div>
+        </footer>
       </div>
     </main>
   );
