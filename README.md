@@ -1,0 +1,2 @@
+# sps
+simple prompt storage
