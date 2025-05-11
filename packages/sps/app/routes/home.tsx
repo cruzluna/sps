@@ -23,13 +23,6 @@ export default function Home() {
             Make storing prompts simple and never hardcode it in code again
           </p>
         </header>
-        <div className="mt-8 w-full max-w-2xl overflow-auto">
-          <img
-            src="/excalidraw-db-v0.svg"
-            alt="System Prompt Storage Architecture"
-            className="w-full max-h-[400px] object-contain"
-          />
-        </div>
         <div className="mt-12 w-full max-w-2xl overflow-auto">
           <h2 className="text-xl font-medium font-['system-ui'] mb-4 text-center">
             Development Plan
