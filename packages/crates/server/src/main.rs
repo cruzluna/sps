@@ -25,16 +25,18 @@ async fn hello_world() -> &'static str {
 )]
 struct ApiDoc;
 
+fn write_openapi_spec() -> std::io::Result<()> {
+    let spec = ApiDoc::openapi();
+    let yaml_spec = serde_yaml::to_string(&spec).expect("Failed to serialize OpenAPI spec to YAML");
+    std::fs::write("openapi.yaml", yaml_spec)
+}
+
 #[tokio::main]
 async fn main() {
-    let spec = ApiDoc::openapi();
-    let yaml_spec = serde_yaml::to_string(&spec).unwrap();
-    std::fs::write("openapi.yaml", yaml_spec).unwrap();
+    write_openapi_spec().expect("Failed to write OpenAPI spec to file");
 
-    // build our application with routes
     let app = Router::new().route("/", get(hello_world));
 
-    // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
