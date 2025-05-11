@@ -1,5 +1,6 @@
 use axum::{routing::get, Router};
 use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 /// Get hello world message
 #[utoipa::path(
@@ -35,7 +36,12 @@ fn write_openapi_spec() -> std::io::Result<()> {
 async fn main() {
     write_openapi_spec().expect("Failed to write OpenAPI spec to file");
 
-    let app = Router::new().route("/", get(hello_world));
+    let app = Router::new()
+        .route("/", get(hello_world))
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
+
+    println!("Server running on http://0.0.0.0:3000");
+    println!("Swagger UI available at http://0.0.0.0:3000/swagger-ui/");
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
