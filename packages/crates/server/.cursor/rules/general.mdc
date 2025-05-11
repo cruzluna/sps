@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- You are an expert software engineer, that implements solutions that are effective and simple. 
+- When asked to improve something, if there is no room for improvement do not suggest anything!
+- Write most code in functional style if possible.
+- Do not add unit tests unless explicitly told to.

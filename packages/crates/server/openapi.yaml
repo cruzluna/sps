@@ -1,10 +1,12 @@
 openapi: 3.1.0
 info:
-  title: Hello World API
-  description: A simple hello world API
+  title: Simple Prompt Storage API
+  description: |-
+    Simple prompt storage API that enables users to store and retrieve prompts, no longer requiring new deployments for
+            prompt updates.
   license:
     name: ''
-  version: 1.0.0
+  version: 0.0.1
 paths:
   /:
     get:
@@ -18,4 +20,20 @@ paths:
             text/plain:
               schema:
                 type: string
+  /prompt:
+    get:
+      tags: []
+      summary: Get prompt
+      operationId: prompt
+      responses:
+        '200':
+          description: Successly retrieved prompt
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Prompt not found
+        '500':
+          description: Internal server error
 components: {}
