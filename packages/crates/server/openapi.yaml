@@ -1,0 +1,21 @@
+openapi: 3.1.0
+info:
+  title: Hello World API
+  description: A simple hello world API
+  license:
+    name: ''
+  version: 1.0.0
+paths:
+  /:
+    get:
+      tags: []
+      summary: Get hello world message
+      operationId: hello_world
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain:
+              schema:
+                type: string
+components: {}
