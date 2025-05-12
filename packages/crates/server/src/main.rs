@@ -1,4 +1,9 @@
-use axum::{routing::get, Router};
+use axum::{
+    extract::Path,
+    routing::{delete, get, post, put},
+    Router,
+};
+use surrealdb::Surreal;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -18,7 +23,10 @@ async fn hello_world() -> &'static str {
 /// Get prompt
 #[utoipa::path(
     get,
-    path = "/prompt",
+    path = "/prompt/{id}",
+    params(
+        ("id" = String, Path, description = "Prompt identifier")
+    ),
     responses(
         (status = StatusCode::OK, description = "Successly retrieved prompt", body = String),
         (status = StatusCode::NOT_FOUND, description = "Prompt not found"),
@@ -26,8 +34,9 @@ async fn hello_world() -> &'static str {
     )
 )]
 #[axum_macros::debug_handler]
-async fn prompt() -> &'static str {
-    "Hello, World!"
+async fn get_prompt(Path(id): Path<String>) -> &'static str {
+    println!("Requested prompt with id: {}", id); // Example usage
+    "Hello, World! This is prompt with id (to be implemented)"
 }
 
 /// Create prompt
@@ -75,7 +84,7 @@ async fn delete_prompt() -> &'static str {
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(hello_world, prompt, create_prompt, update_prompt, delete_prompt),
+    paths(hello_world, get_prompt, create_prompt, update_prompt, delete_prompt),
     info(
         title = "Simple Prompt Storage API",
         version = "0.0.1",
@@ -91,17 +100,34 @@ fn write_openapi_spec() -> std::io::Result<()> {
     std::fs::write("openapi.yaml", yaml_spec)
 }
 
+#[derive(Clone)]
+struct AppState {
+    mem_db: Surreal<surrealdb::engine::local::Db>,
+}
+
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: Tracing
     write_openapi_spec().expect("Failed to write OpenAPI spec to file");
+
+    // State
+    let mem_db = Surreal::new::<surrealdb::engine::local::Mem>(()).await?;
+    let state = AppState { mem_db };
 
     let app = Router::new()
         .route("/", get(hello_world))
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
+        .route("/prompt", post(create_prompt))
+        .route(
+            "/prompt/:id",
+            get(get_prompt).put(update_prompt).delete(delete_prompt),
+        )
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .with_state(state);
 
     println!("Server running on http://0.0.0.0:3000");
     println!("Swagger UI available at http://0.0.0.0:3000/swagger-ui/");
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
+    Ok(())
 }
