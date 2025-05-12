@@ -1,11 +1,19 @@
+use api_models::{Prompt, PromptWithoutId};
 use axum::{
-    extract::Path,
-    routing::{delete, get, post, put},
-    Router,
+    body::Body,
+    extract::{Path, State},
+    http::{Response, StatusCode},
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
 };
+use mem_db::DbPrompt;
 use surrealdb::Surreal;
-use utoipa::OpenApi;
+use utoipa::{OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
+
+mod api_models;
+mod mem_db;
 
 /// Get hello world message
 #[utoipa::path(
@@ -39,18 +47,58 @@ async fn get_prompt(Path(id): Path<String>) -> &'static str {
     "Hello, World! This is prompt with id (to be implemented)"
 }
 
+enum CreatePromptError {
+    InvalidRequestBody,
+    InternalServerError,
+}
+
+// TODO: make this cleaner
+impl IntoResponse for CreatePromptError {
+    fn into_response(self) -> Response<Body> {
+        match self {
+            Self::InvalidRequestBody => Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::empty())
+                .unwrap_or_else(|_| Response::new(Body::empty())),
+            Self::InternalServerError => Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .unwrap_or_else(|_| Response::new(Body::empty())),
+        }
+    }
+}
+
 /// Create prompt
 #[utoipa::path(
     post,
     path = "/prompt",
+    request_body = PromptWithoutId,
     responses(
-        (status = StatusCode::CREATED, description = "Successly created prompt", body = String),
+        (status = StatusCode::CREATED, description = "Successfully created prompt", body = Prompt),
         (status = StatusCode::BAD_REQUEST, description = "Invalid request body")
     )
 )]
 #[axum_macros::debug_handler]
-async fn create_prompt() -> &'static str {
-    "Hello, World!"
+async fn create_prompt(
+    State(state): State<AppState>,
+    Json(prompt): Json<PromptWithoutId>,
+) -> Result<String, CreatePromptError> {
+    // TODO: Tracing
+    println!("Creating prompt: {:?}", prompt);
+    let created: Option<DbPrompt> = state
+        .mem_db
+        .create("prompt_table")
+        .content(prompt)
+        .await
+        .map_err(|e| {
+            println!("Database error: {:?}", e);
+            CreatePromptError::InternalServerError
+        })?;
+    println!("Created prompt: {:?}", created);
+    dbg!(&created);
+
+    let prompt = created.ok_or(CreatePromptError::InternalServerError)?;
+    Ok(prompt.id.to_string())
 }
 
 /// Update prompt
@@ -112,13 +160,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // State
     let mem_db = Surreal::new::<surrealdb::engine::local::Mem>(()).await?;
+    mem_db
+        .use_ns("prompt_storage")
+        .use_db("prompt_storage")
+        .await?;
     let state = AppState { mem_db };
 
     let app = Router::new()
         .route("/", get(hello_world))
         .route("/prompt", post(create_prompt))
         .route(
-            "/prompt/:id",
+            "/prompt/{id}",
             get(get_prompt).put(update_prompt).delete(delete_prompt),
         )
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))

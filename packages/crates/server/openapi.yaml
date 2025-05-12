@@ -21,10 +21,37 @@ paths:
               schema:
                 type: string
   /prompt:
+    post:
+      tags: []
+      summary: Create prompt
+      operationId: create_prompt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptWithoutId'
+        required: true
+      responses:
+        '201':
+          description: Successfully created prompt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prompt'
+        '400':
+          description: Invalid request body
+  /prompt/{id}:
     get:
       tags: []
       summary: Get prompt
-      operationId: prompt
+      operationId: get_prompt
+      parameters:
+      - name: id
+        in: path
+        description: Prompt identifier
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Successly retrieved prompt
@@ -36,4 +63,74 @@ paths:
           description: Prompt not found
         '500':
           description: Internal server error
-components: {}
+    put:
+      tags: []
+      summary: Update prompt
+      operationId: update_prompt
+      responses:
+        '200':
+          description: Successly updated prompt
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Invalid request body
+        '404':
+          description: Prompt not found
+    delete:
+      tags: []
+      summary: Delete prompt
+      operationId: delete_prompt
+      responses:
+        '200':
+          description: Successly deleted prompt
+        '404':
+          description: Prompt not found
+components:
+  schemas:
+    Prompt:
+      type: object
+      required:
+      - id
+      - metadata
+      - content
+      properties:
+        content:
+          type: string
+        id:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/PromptMetadata'
+    PromptMetadata:
+      type: object
+      required:
+      - name
+      - description
+      - created_at
+      - updated_at
+      - version
+      properties:
+        created_at:
+          type: integer
+          minimum: 0
+        description:
+          type: string
+        name:
+          type: string
+        updated_at:
+          type: integer
+          minimum: 0
+        version:
+          type: integer
+          minimum: 0
+    PromptWithoutId:
+      type: object
+      required:
+      - metadata
+      - content
+      properties:
+        content:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/PromptMetadata'
