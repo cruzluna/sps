@@ -8,18 +8,6 @@ info:
     name: ''
   version: 0.0.1
 paths:
-  /:
-    get:
-      tags: []
-      summary: Get hello world message
-      operationId: hello_world
-      responses:
-        '200':
-          description: Success
-          content:
-            text/plain:
-              schema:
-                type: string
   /prompt:
     post:
       tags: []
@@ -86,44 +74,31 @@ paths:
         '200':
           description: Successly deleted prompt
         '404':
-          description: Prompt not found
+          description: Prompt does not exist
+        '500':
+          description: Internal server error
 components:
   schemas:
     Prompt:
       type: object
       required:
       - id
-      - metadata
       - content
       properties:
         content:
           type: string
         id:
           type: string
-        metadata:
-          $ref: '#/components/schemas/PromptMetadata'
     PromptMetadata:
       type: object
       required:
       - name
       - description
-      - created_at
-      - updated_at
-      - version
       properties:
-        created_at:
-          type: integer
-          minimum: 0
         description:
           type: string
         name:
           type: string
-        updated_at:
-          type: integer
-          minimum: 0
-        version:
-          type: integer
-          minimum: 0
     PromptWithoutId:
       type: object
       required:
