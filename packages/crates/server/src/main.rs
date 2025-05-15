@@ -7,7 +7,7 @@ use axum::{
     routing::{get, post, put},
     Json, Router,
 };
-use cache::PromptDb;
+use cache::{DatabaseError, PromptDb};
 use log::{debug, error, info};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -43,7 +43,7 @@ async fn get_prompt(
     let db_prompt = cache
         .get_prompt(&id)
         .map_err(|e| {
-            error!("Failed to get prompt for id {}: {}", id, e);
+            error!("Failed to get prompt for id {}: {:?}", id, e);
             GetPromptError::InternalServerError
         })?
         .ok_or(GetPromptError::NotFound)?;
@@ -81,8 +81,11 @@ async fn get_prompt_content(
         false => cache.get_prompt_content(&id),
     }
     .map_err(|e| {
-        error!("Failed to get prompt content for id {}: {}", id, e);
-        GetPromptError::InternalServerError
+        error!("Failed to get prompt content for id {}: {:?}", id, e);
+        match e {
+            DatabaseError::NotFound => GetPromptError::NotFound,
+            DatabaseError::UnhandledError => GetPromptError::InternalServerError,
+        }
     })?;
 
     Ok(Json(content))
@@ -200,9 +203,13 @@ async fn update_prompt(
     info!("Updating prompt: {:?}", prompt);
 
     let cache = state.cache.lock().await;
-    cache
-        .update_prompt(prompt.into())
-        .map_err(|_| UpdatePromptError::InternalServerError)?;
+    cache.update_prompt(prompt.into()).map_err(|e| {
+        error!("Database error: {:?}", e);
+        match e {
+            DatabaseError::NotFound => UpdatePromptError::NotFound,
+            DatabaseError::UnhandledError => UpdatePromptError::InternalServerError,
+        }
+    })?;
 
     Ok(id)
 }
@@ -227,7 +234,13 @@ async fn update_prompt_metadata(
     let cache = state.cache.lock().await;
     cache
         .update_prompt_metadata(&id, prompt.into())
-        .map_err(|_| UpdateMetadataError::InternalServerError)?;
+        .map_err(|e| {
+            error!("Database error: {:?}", e);
+            match e {
+                DatabaseError::NotFound => UpdateMetadataError::NotFound,
+                DatabaseError::UnhandledError => UpdateMetadataError::InternalServerError,
+            }
+        })?;
 
     Ok(id)
 }

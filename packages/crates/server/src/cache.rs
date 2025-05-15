@@ -1,9 +1,22 @@
+use log::error;
 use rusqlite::{params, Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use crate::api_models::{CreatePromptRequest, UpdatePromptRequest};
+
+#[derive(Debug)]
+pub enum DatabaseError {
+    NotFound,
+    UnhandledError,
+}
+
+// impl Display for DatabaseError {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         write!(f, "{:?}", self)
+//     }
+// }
 
 pub fn now_timestamp() -> i64 {
     SystemTime::now()
@@ -52,6 +65,7 @@ impl From<UpdatePromptRequest> for DbPrompt {
         }
     }
 }
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DbPromptMetadata {
     // Reference to the prompt id
@@ -104,7 +118,8 @@ impl PromptDb {
                 name TEXT NOT NULL,
                 description TEXT NOT NULL,
                 category TEXT NOT NULL,
-                tags TEXT NOT NULL
+                tags TEXT NOT NULL,
+                updated_at INTEGER NOT NULL
             )",
             [],
         )?;
@@ -129,26 +144,71 @@ impl PromptDb {
 
         Ok(prompt)
     }
-    pub fn get_prompt_content(&self, id: &str) -> Result<String> {
+    pub fn get_prompt_content(&self, id: &str) -> Result<String, DatabaseError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT content FROM prompts WHERE id = ?1")?;
+            .prepare("SELECT content FROM prompts WHERE id = ?1")
+            .map_err(|e| {
+                error!(
+                    "Failed to prepare statement for get_prompt_content: {:?}",
+                    e
+                );
+                DatabaseError::UnhandledError
+            })?;
 
-        let content = stmt.query_row(params![id], |row| row.get(0))?;
+        let content = stmt
+            .query_row(params![id], |row| row.get(0))
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => {
+                    error!("No prompt found with id {}", id);
+                    DatabaseError::NotFound
+                }
+                _ => {
+                    error!("Database error while getting prompt content: {:?}", e);
+                    DatabaseError::UnhandledError
+                }
+            })?;
         Ok(content)
     }
 
-    pub fn get_prompt_content_latest_version(&self, id: &str) -> Result<String> {
+    pub fn get_prompt_content_latest_version(&self, id: &str) -> Result<String, DatabaseError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT content FROM prompts WHERE id = ?1 ORDER DESC limit 1")?;
+            .prepare("SELECT content FROM prompts WHERE id = ?1 ORDER DESC limit 1")
+            .map_err(|e| {
+                error!(
+                    "Failed to prepare statement for get_prompt_content_latest_version: {}",
+                    e
+                );
+                DatabaseError::UnhandledError
+            })?;
 
-        let content = stmt.query_row(params![id], |row| row.get(0))?;
+        let content = stmt
+            .query_row(params![id], |row| row.get(0))
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => {
+                    error!("No prompt found with id {} for latest version", id);
+                    DatabaseError::NotFound
+                }
+                _ => {
+                    error!(
+                        "Database error while getting latest prompt content: {:?}",
+                        e
+                    );
+                    DatabaseError::UnhandledError
+                }
+            })?;
         Ok(content)
     }
 
-    pub fn get_prompt(&self, id: &str) -> Result<Option<DbPrompt>> {
-        let mut stmt = self.conn.prepare("SELECT * FROM prompts WHERE id = ?1")?;
+    pub fn get_prompt(&self, id: &str) -> Result<Option<DbPrompt>, DatabaseError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM prompts WHERE id = ?1")
+            .map_err(|e| {
+                error!("Failed to prepare statement for get_prompt: {}", e);
+                DatabaseError::UnhandledError
+            })?;
 
         let prompt = stmt.query_row(params![id], |row| {
             Ok(DbPrompt {
@@ -165,40 +225,66 @@ impl PromptDb {
         match prompt {
             Ok(prompt) => Ok(Some(prompt)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(e),
+            Err(e) => {
+                error!("Database error while getting prompt: {}", e);
+                Err(DatabaseError::UnhandledError)
+            }
         }
     }
 
     /// Insert a new version of the prompt
-    pub fn update_prompt(&self, prompt: DbPrompt) -> Result<String> {
-        let original_prompt = self
-            .get_prompt(&prompt.id)?
-            .ok_or(rusqlite::Error::QueryReturnedNoRows)?;
+    pub fn update_prompt(&self, prompt: DbPrompt) -> Result<String, DatabaseError> {
+        let original_prompt = self.get_prompt(&prompt.id)?.ok_or_else(|| {
+            error!("Prompt not found for update with id: {}", prompt.id);
+            DatabaseError::NotFound
+        })?;
 
         let mut new_prompt = prompt;
         new_prompt.version = original_prompt.version + 1;
-        let new_prompt = self.insert_prompt(new_prompt)?;
+        let new_prompt = self.insert_prompt(new_prompt).map_err(|e| {
+            error!("Failed to insert updated prompt: {}", e);
+            match e {
+                rusqlite::Error::QueryReturnedNoRows => DatabaseError::NotFound,
+                _ => DatabaseError::UnhandledError,
+            }
+        })?;
 
         Ok(new_prompt.id)
     }
 
-    pub fn update_prompt_metadata(&self, id: &str, metadata: DbPromptMetadata) -> Result<String> {
+    pub fn update_prompt_metadata(
+        &self,
+        id: &str,
+        metadata: DbPromptMetadata,
+    ) -> Result<String, DatabaseError> {
         let now = now_timestamp();
 
-        self.conn.execute(
+        let rows_affected = self.conn.execute(
             "UPDATE metadata SET name = ?2, description = ?3, category = ?4, tags = ?5, updated_at = ?7
              WHERE id = ?1",
             params![&id, &metadata.name, &metadata.description, &metadata.category, &metadata.tags_to_string(), now, now],
-        )?;
+        ).map_err(|e| {
+                error!("Failed to update prompt metadata: {:?}", e);
+                DatabaseError::UnhandledError
+            })?;
 
-        Ok(id.to_string())
+        match rows_affected {
+            0 => Err(DatabaseError::NotFound),
+            _ => Ok(id.to_string()),
+        }
     }
 
-    pub fn delete_prompt(&self, id: &str) -> Result<bool> {
-        let rows_affected = self.conn.execute(
-            "UPDATE prompts SET archived = true WHERE id = ?1",
-            params![id],
-        )?;
+    pub fn delete_prompt(&self, id: &str) -> Result<bool, DatabaseError> {
+        let rows_affected = self
+            .conn
+            .execute(
+                "UPDATE prompts SET archived = true WHERE id = ?1",
+                params![id],
+            )
+            .map_err(|e| {
+                error!("Failed to delete prompt with id {}: {}", id, e);
+                DatabaseError::UnhandledError
+            })?;
         Ok(rows_affected > 0)
     }
 }
