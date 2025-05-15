@@ -75,8 +75,6 @@ pub struct Prompt {
     pub archived: Option<bool>,
     /// The creation date of the prompt
     pub created_at: i64,
-    /// The last update date of the prompt
-    pub updated_at: i64,
     /// The metadata of the prompt
     pub metadata: Option<PromptMetadata>,
 }
@@ -91,7 +89,6 @@ impl From<DbPrompt> for Prompt {
             branched: db_prompt.branched,
             archived: db_prompt.archived,
             created_at: db_prompt.created_at,
-            updated_at: db_prompt.updated_at,
             //TODO: include metadata
             metadata: None,
         }

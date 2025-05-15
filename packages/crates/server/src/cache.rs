@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-use crate::api_models::CreatePromptRequest;
+use crate::api_models::{CreatePromptRequest, UpdatePromptRequest};
 
 pub fn now_timestamp() -> i64 {
     SystemTime::now()
@@ -19,9 +19,9 @@ pub struct DbPrompt {
     pub content: String,
     pub parent: String,
     pub branched: Option<bool>,
+    // TODO: add an archived date?
     pub archived: Option<bool>,
     pub created_at: i64,
-    pub updated_at: i64,
 }
 
 impl From<CreatePromptRequest> for DbPrompt {
@@ -35,11 +35,23 @@ impl From<CreatePromptRequest> for DbPrompt {
             branched: prompt.branched,
             archived: Some(false),
             created_at: now_timestamp(),
-            updated_at: now_timestamp(),
         }
     }
 }
 
+impl From<UpdatePromptRequest> for DbPrompt {
+    fn from(prompt: UpdatePromptRequest) -> Self {
+        Self {
+            id: prompt.id,
+            version: 0,
+            content: prompt.content,
+            parent: prompt.parent,
+            branched: prompt.branched,
+            archived: Some(false),
+            created_at: now_timestamp(),
+        }
+    }
+}
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DbPromptMetadata {
     // Reference to the prompt id
@@ -81,7 +93,6 @@ impl PromptDb {
                 branched BOOLEAN,
                 archived BOOLEAN,
                 created_at INTEGER NOT NULL,
-                updated_at INTEGER NOT NULL
             )",
             [],
         )?;
@@ -103,8 +114,8 @@ impl PromptDb {
 
     pub fn insert_prompt(&self, prompt: DbPrompt) -> Result<DbPrompt> {
         self.conn.execute(
-            "INSERT INTO prompts (id, version, content, parent, branched, archived, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT INTO prompts (id, version, content, parent, branched, archived, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 &prompt.id,
                 &prompt.version,
@@ -113,7 +124,6 @@ impl PromptDb {
                 &prompt.branched,
                 &prompt.archived,
                 &prompt.created_at,
-                &prompt.updated_at
             ],
         )?;
 
@@ -149,7 +159,6 @@ impl PromptDb {
                 branched: row.get(4)?,
                 archived: row.get(5)?,
                 created_at: row.get(6)?,
-                updated_at: row.get(7)?,
             })
         });
 
@@ -162,21 +171,15 @@ impl PromptDb {
 
     /// Insert a new version of the prompt
     pub fn update_prompt(&self, prompt: DbPrompt) -> Result<String> {
-        let version = prompt.version + 1;
+        let original_prompt = self
+            .get_prompt(&prompt.id)?
+            .ok_or(rusqlite::Error::QueryReturnedNoRows)?;
 
-        self.conn.execute(
-            "INSERT INTO prompts (id, content, version, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![
-                &prompt.id,
-                &prompt.content,
-                version,
-                &prompt.created_at,
-                &prompt.updated_at
-            ],
-        )?;
+        let mut new_prompt = prompt;
+        new_prompt.version = original_prompt.version + 1;
+        let new_prompt = self.insert_prompt(new_prompt)?;
 
-        Ok(prompt.id)
+        Ok(new_prompt.id)
     }
 
     pub fn update_prompt_metadata(&self, id: &str, metadata: DbPromptMetadata) -> Result<String> {
@@ -192,10 +195,9 @@ impl PromptDb {
     }
 
     pub fn delete_prompt(&self, id: &str) -> Result<bool> {
-        let now = now_timestamp();
         let rows_affected = self.conn.execute(
-            "UPDATE prompts SET archived = true, updated_at = ?2 WHERE id = ?1",
-            params![id, now],
+            "UPDATE prompts SET archived = true WHERE id = ?1",
+            params![id],
         )?;
         Ok(rows_affected > 0)
     }

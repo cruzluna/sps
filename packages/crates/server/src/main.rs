@@ -197,14 +197,14 @@ async fn update_prompt(
     Path(id): Path<String>,
     Json(prompt): Json<UpdatePromptRequest>,
 ) -> Result<String, UpdatePromptError> {
-    todo!()
-    // TODO: Implement update prompt
-    // let cache = state.cache.lock().await;
-    // cache
-    //     .update_prompt(db_prompt)
-    //     .map_err(|_| UpdatePromptError::InternalServerError)?;
+    info!("Updating prompt: {:?}", prompt);
 
-    // Ok(id)
+    let cache = state.cache.lock().await;
+    cache
+        .update_prompt(prompt.into())
+        .map_err(|_| UpdatePromptError::InternalServerError)?;
+
+    Ok(id)
 }
 
 /// Update prompt metadata
@@ -223,6 +223,7 @@ async fn update_prompt_metadata(
     Path(id): Path<String>,
     Json(prompt): Json<UpdateMetadataRequest>,
 ) -> Result<String, UpdateMetadataError> {
+    info!("Updating prompt metadata: {:?}", prompt);
     let cache = state.cache.lock().await;
     cache
         .update_prompt_metadata(&id, prompt.into())
