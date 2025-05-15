@@ -1,21 +1,20 @@
-use api_models::{Prompt, PromptWithoutId};
+use api_models::{CreatePromptRequest, Prompt, UpdateMetadataRequest, UpdatePromptRequest};
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{Response, StatusCode},
     response::IntoResponse,
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
-use cache::{DbPrompt, PromptDb};
-use log::{debug, info};
+use cache::PromptDb;
+use log::{debug, error, info};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use uuid::Uuid;
 
 mod api_models;
 mod cache;
@@ -43,12 +42,50 @@ async fn get_prompt(
     let cache = state.cache.lock().await;
     let db_prompt = cache
         .get_prompt(&id)
-        .map_err(|_| GetPromptError::InternalServerError)?
+        .map_err(|e| {
+            error!("Failed to get prompt for id {}: {}", id, e);
+            GetPromptError::InternalServerError
+        })?
         .ok_or(GetPromptError::NotFound)?;
 
-    let prompt = Prompt::to_prompt_from_db_prompt(db_prompt);
+    let prompt = Prompt::from(db_prompt);
 
     Ok(Json(prompt))
+}
+
+/// Get prompt content
+#[utoipa::path(
+    get,
+    path = "/prompt/{id}/content",
+    params(
+        ("id" = String, Path, description = "Prompt identifier"),
+        ("latest" = bool, Query, description = "Latest version of the prompt")
+    ),
+    responses(
+        (status = StatusCode::OK, description = "Successly retrieved prompt content", body = String),
+        (status = StatusCode::NOT_FOUND, description = "Prompt not found"),
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Internal server error")
+    )
+)]
+#[axum_macros::debug_handler]
+async fn get_prompt_content(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(latest): Query<bool>,
+) -> Result<Json<String>, GetPromptError> {
+    info!("Requested prompt with id: {}", id);
+
+    let cache = state.cache.lock().await;
+    let content = match latest {
+        true => cache.get_prompt_content_latest_version(&id),
+        false => cache.get_prompt_content(&id),
+    }
+    .map_err(|e| {
+        error!("Failed to get prompt content for id {}: {}", id, e);
+        GetPromptError::InternalServerError
+    })?;
+
+    Ok(Json(content))
 }
 
 enum DeletePromptError {
@@ -121,7 +158,7 @@ impl IntoResponse for UpdatePromptError {
 #[utoipa::path(
     post,
     path = "/prompt",
-    request_body = PromptWithoutId,
+    request_body = CreatePromptRequest,
     responses(
         (status = StatusCode::CREATED, description = "Successfully created prompt", body = Prompt),
         (status = StatusCode::BAD_REQUEST, description = "Invalid request body")
@@ -130,19 +167,13 @@ impl IntoResponse for UpdatePromptError {
 #[axum_macros::debug_handler]
 async fn create_prompt(
     State(state): State<AppState>,
-    Json(prompt): Json<PromptWithoutId>,
+    Json(prompt): Json<CreatePromptRequest>,
 ) -> Result<String, CreatePromptError> {
     info!("Creating prompt: {:?}", prompt);
 
-    let db_prompt = DbPrompt {
-        id: Uuid::new_v4().to_string(),
-        content: prompt.content,
-        // metadata: prompt.metadata,
-    };
-
     let cache = state.cache.lock().await;
     cache
-        .insert_prompt(db_prompt)
+        .insert_prompt(prompt.into())
         .map_err(|e| {
             debug!("Database error: {:?}", e);
             CreatePromptError::InternalServerError
@@ -164,16 +195,56 @@ async fn create_prompt(
 async fn update_prompt(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(prompt): Json<PromptWithoutId>,
+    Json(prompt): Json<UpdatePromptRequest>,
 ) -> Result<String, UpdatePromptError> {
+    todo!()
     // TODO: Implement update prompt
     // let cache = state.cache.lock().await;
     // cache
     //     .update_prompt(db_prompt)
     //     .map_err(|_| UpdatePromptError::InternalServerError)?;
 
-    // Ok(())
+    // Ok(id)
+}
+
+/// Update prompt metadata
+#[utoipa::path(
+    put,
+    path = "/prompt/{id}/metadata",
+    responses(
+        (status = StatusCode::OK, description = "Successly updated prompt metadata", body = String),
+        (status = StatusCode::NOT_FOUND, description = "Prompt not found"),
+        (status = StatusCode::BAD_REQUEST, description = "Invalid request body")
+    )
+)]
+#[axum_macros::debug_handler]
+async fn update_prompt_metadata(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(prompt): Json<UpdateMetadataRequest>,
+) -> Result<String, UpdateMetadataError> {
+    let cache = state.cache.lock().await;
+    cache
+        .update_prompt_metadata(&id, prompt.into())
+        .map_err(|_| UpdateMetadataError::InternalServerError)?;
+
     Ok(id)
+}
+
+enum UpdateMetadataError {
+    NotFound,
+    InternalServerError,
+}
+
+impl IntoResponse for UpdateMetadataError {
+    fn into_response(self) -> Response<Body> {
+        let status = match self {
+            Self::NotFound => StatusCode::NOT_FOUND,
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        status.into_response()
+    }
 }
 
 /// Delete prompt
@@ -203,7 +274,14 @@ async fn delete_prompt(
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(get_prompt, create_prompt, update_prompt, delete_prompt),
+    paths(
+        get_prompt,
+        get_prompt_content,
+        create_prompt,
+        update_prompt,
+        update_prompt_metadata,
+        delete_prompt
+    ),
     info(
         title = "Simple Prompt Storage API",
         version = "0.0.1",
@@ -237,6 +315,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     write_openapi_spec().expect("Failed to write OpenAPI spec to file");
 
+    // TODO: Add SQL database as fallback
+    // TODO: Object storage for long term storage
     let cache = PromptDb::new()?;
     let state = AppState {
         cache: Arc::new(Mutex::new(cache)),
@@ -248,6 +328,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "/prompt/{id}",
             get(get_prompt).put(update_prompt).delete(delete_prompt),
         )
+        .route("/prompt/{id}/content", get(get_prompt_content))
+        .route("/prompt/{id}/metadata", put(update_prompt_metadata))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(TraceLayer::new_for_http())
         .with_state(state);

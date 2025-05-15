@@ -1,8 +1,11 @@
 use rusqlite::{params, Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
-fn now_timestamp() -> i64 {
+use crate::api_models::CreatePromptRequest;
+
+pub fn now_timestamp() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("System time before UNIX EPOCH")
@@ -12,7 +15,46 @@ fn now_timestamp() -> i64 {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DbPrompt {
     pub id: String,
+    pub version: i32,
     pub content: String,
+    pub parent: String,
+    pub branched: Option<bool>,
+    pub archived: Option<bool>,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+impl From<CreatePromptRequest> for DbPrompt {
+    fn from(prompt: CreatePromptRequest) -> Self {
+        let id = Uuid::new_v4().to_string();
+        Self {
+            id: id.clone(),
+            version: 1,
+            content: prompt.content,
+            parent: prompt.parent.unwrap_or(id.clone()),
+            branched: prompt.branched,
+            archived: Some(false),
+            created_at: now_timestamp(),
+            updated_at: now_timestamp(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DbPromptMetadata {
+    // Reference to the prompt id
+    pub id: String,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub updated_at: i64,
+}
+
+impl DbPromptMetadata {
+    pub fn tags_to_string(&self) -> Option<String> {
+        self.tags.clone().map(|tags| tags.join(","))
+    }
 }
 
 pub struct PromptDb {
@@ -33,9 +75,25 @@ impl PromptDb {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS prompts (
                 id TEXT PRIMARY KEY,
+                version INTEGER NOT NULL,
                 content TEXT NOT NULL,
+                parent TEXT,
+                branched BOOLEAN,
+                archived BOOLEAN,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
+            )",
+            [],
+        )?;
+
+        // Metadata table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS metadata (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                category TEXT NOT NULL,
+                tags TEXT NOT NULL
             )",
             [],
         )?;
@@ -44,26 +102,54 @@ impl PromptDb {
     }
 
     pub fn insert_prompt(&self, prompt: DbPrompt) -> Result<DbPrompt> {
-        let now = now_timestamp();
-
         self.conn.execute(
-            "INSERT INTO prompts (id, content, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4)",
-            params![&prompt.id, &prompt.content, now, now],
+            "INSERT INTO prompts (id, version, content, parent, branched, archived, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                &prompt.id,
+                &prompt.version,
+                &prompt.content,
+                &prompt.parent,
+                &prompt.branched,
+                &prompt.archived,
+                &prompt.created_at,
+                &prompt.updated_at
+            ],
         )?;
 
         Ok(prompt)
     }
-
-    pub fn get_prompt(&self, id: &str) -> Result<Option<DbPrompt>> {
+    pub fn get_prompt_content(&self, id: &str) -> Result<String> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, content FROM prompts WHERE id = ?1")?;
+            .prepare("SELECT content FROM prompts WHERE id = ?1")?;
+
+        let content = stmt.query_row(params![id], |row| row.get(0))?;
+        Ok(content)
+    }
+
+    pub fn get_prompt_content_latest_version(&self, id: &str) -> Result<String> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT content FROM prompts WHERE id = ?1 ORDER DESC limit 1")?;
+
+        let content = stmt.query_row(params![id], |row| row.get(0))?;
+        Ok(content)
+    }
+
+    pub fn get_prompt(&self, id: &str) -> Result<Option<DbPrompt>> {
+        let mut stmt = self.conn.prepare("SELECT * FROM prompts WHERE id = ?1")?;
 
         let prompt = stmt.query_row(params![id], |row| {
             Ok(DbPrompt {
                 id: row.get(0)?,
-                content: row.get(1)?,
+                version: row.get(1)?,
+                content: row.get(2)?,
+                parent: row.get(3)?,
+                branched: row.get(4)?,
+                archived: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         });
 
@@ -74,23 +160,43 @@ impl PromptDb {
         }
     }
 
+    /// Insert a new version of the prompt
     pub fn update_prompt(&self, prompt: DbPrompt) -> Result<String> {
-        let now = now_timestamp();
+        let version = prompt.version + 1;
 
         self.conn.execute(
-            "UPDATE prompts 
-             SET content = ?2, updated_at = ?3
-             WHERE id = ?1",
-            params![&prompt.id, &prompt.content, now],
+            "INSERT INTO prompts (id, content, version, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                &prompt.id,
+                &prompt.content,
+                version,
+                &prompt.created_at,
+                &prompt.updated_at
+            ],
         )?;
 
         Ok(prompt.id)
     }
 
+    pub fn update_prompt_metadata(&self, id: &str, metadata: DbPromptMetadata) -> Result<String> {
+        let now = now_timestamp();
+
+        self.conn.execute(
+            "UPDATE metadata SET name = ?2, description = ?3, category = ?4, tags = ?5, updated_at = ?7
+             WHERE id = ?1",
+            params![&id, &metadata.name, &metadata.description, &metadata.category, &metadata.tags_to_string(), now, now],
+        )?;
+
+        Ok(id.to_string())
+    }
+
     pub fn delete_prompt(&self, id: &str) -> Result<bool> {
-        let rows_affected = self
-            .conn
-            .execute("DELETE FROM prompts WHERE id = ?1", params![id])?;
+        let now = now_timestamp();
+        let rows_affected = self.conn.execute(
+            "UPDATE prompts SET archived = true, updated_at = ?2 WHERE id = ?1",
+            params![id, now],
+        )?;
         Ok(rows_affected > 0)
     }
 }

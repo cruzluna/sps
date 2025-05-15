@@ -17,7 +17,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PromptWithoutId'
+              $ref: '#/components/schemas/CreatePromptRequest'
         required: true
       responses:
         '201':
@@ -77,35 +77,161 @@ paths:
           description: Prompt does not exist
         '500':
           description: Internal server error
+  /prompt/{id}/content:
+    get:
+      tags: []
+      summary: Get prompt content
+      operationId: get_prompt_content
+      parameters:
+      - name: id
+        in: path
+        description: Prompt identifier
+        required: true
+        schema:
+          type: string
+      - name: latest
+        in: query
+        description: Latest version of the prompt
+        required: true
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successly retrieved prompt content
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Prompt not found
+        '500':
+          description: Internal server error
+  /prompt/{id}/metadata:
+    put:
+      tags: []
+      summary: Update prompt metadata
+      operationId: update_prompt_metadata
+      responses:
+        '200':
+          description: Successly updated prompt metadata
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Invalid request body
+        '404':
+          description: Prompt not found
 components:
   schemas:
+    CreatePromptRequest:
+      type: object
+      required:
+      - content
+      properties:
+        branched:
+          type:
+          - boolean
+          - 'null'
+          description: Whether the prompt is being branched
+        category:
+          type:
+          - string
+          - 'null'
+          description: The category of the prompt
+        content:
+          type: string
+          description: The content of the prompt
+        description:
+          type:
+          - string
+          - 'null'
+          description: The description of the prompt
+        name:
+          type:
+          - string
+          - 'null'
+          description: The name of the prompt
+        parent:
+          type:
+          - string
+          - 'null'
+          description: The parent of the prompt. If its a new prompt with no lineage, this should be None.
+        tags:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          description: The tags of the prompt
     Prompt:
       type: object
       required:
       - id
       - content
+      - version
+      - parent
+      - created_at
+      - updated_at
       properties:
+        archived:
+          type:
+          - boolean
+          - 'null'
+          description: Whether the prompt is archived
+        branched:
+          type:
+          - boolean
+          - 'null'
+          description: Whether the prompt is being branched
         content:
           type: string
+          description: The content of the prompt
+        created_at:
+          type: integer
+          format: int64
+          description: The creation date of the prompt
         id:
           type: string
+          description: The id of the prompt
+        metadata:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/PromptMetadata'
+            description: The metadata of the prompt
+        parent:
+          type: string
+          description: The parent of the prompt
+        updated_at:
+          type: integer
+          format: int64
+          description: The last update date of the prompt
+        version:
+          type: integer
+          format: int32
+          description: The version of the prompt
     PromptMetadata:
       type: object
-      required:
-      - name
-      - description
       properties:
+        category:
+          type:
+          - string
+          - 'null'
+          description: Category of the prompt ie React, typescript, etc.
         description:
-          type: string
+          type:
+          - string
+          - 'null'
+          description: Description of the prompt
         name:
-          type: string
-    PromptWithoutId:
-      type: object
-      required:
-      - metadata
-      - content
-      properties:
-        content:
-          type: string
-        metadata:
-          $ref: '#/components/schemas/PromptMetadata'
+          type:
+          - string
+          - 'null'
+          description: Name of the prompt
+        tags:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          description: Tags of the prompt ie [react, typescript, etc.]
