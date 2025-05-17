@@ -9,15 +9,13 @@ import {
 } from "react-router";
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
 } from "~/components/ui/navigation-menu";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -32,12 +30,16 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+// TODO: make the navigation items a menu if screen is small
 function Navigation() {
   return (
     <div className="fixed top-0 left-0 right-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
       <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-        <Link to="/" className="text-xl font-['system-ui'] font-medium">
-          simple prompt storage
+        <Link
+          to="/"
+          className="text-xl font-['system-ui'] font-medium min-w-[300px] whitespace-nowrap"
+        >
+          +--[ simple prompt storage ]--+
         </Link>
         <NavigationMenu>
           <NavigationMenuList>
@@ -83,8 +85,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+const queryClient = new QueryClient();
 export default function App() {
-  return <Outlet />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Outlet />
+    </QueryClientProvider>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

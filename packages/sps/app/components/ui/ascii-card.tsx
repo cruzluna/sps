@@ -53,14 +53,25 @@ function AsciiCardHeader({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const borderWidth = useBorderWidth(containerRef);
 
+  // Calculate max text length based on container width
+  const maxTextLength = Math.max(borderWidth - 10, 10); // subtract padding and brackets
+
+  // Truncate text with ellipsis if needed
+  const formatText = (text: string) => {
+    if (text.length <= maxTextLength) {
+      return text.padEnd(maxTextLength, " ");
+    }
+    return text.slice(0, maxTextLength - 3) + "...";
+  };
+
   return (
     <div
       ref={containerRef}
       data-slot="ascii-card-header"
       className={cn("border-b border-black/50 pb-2", className)}
     >
-      <pre className="mb-2">
-        +--[ {id?.toString().padEnd(6, " ") || "HEADER"} ]--+
+      <pre className="mb-2 whitespace-pre overflow-hidden">
+        +--[ {formatText(id?.toString() || "react, typescript, nextjs")} ]--+
       </pre>
       {props.children}
     </div>

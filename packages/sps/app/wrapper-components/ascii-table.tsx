@@ -16,11 +16,7 @@ import {
   AsciiCardFooter,
 } from "~/components/ui/ascii-card";
 
-export default function AsciiTable({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AsciiTable() {
   return (
     <Table>
       <TableBody>

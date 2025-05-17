@@ -1,5 +1,3 @@
-import * as React from "react";
-
 export interface PromptMetadata {
   /** Name of the prompt */
   name?: string;
@@ -29,17 +27,3 @@ export interface Prompt {
   /** The metadata of the prompt */
   metadata?: PromptMetadata;
 }
-
-// Type for the table data
-export type PromptTableData = Prompt;
-
-// Type for the table column definition
-export type PromptTableColumn<T> = {
-  id: keyof T;
-  header: string;
-  accessorKey: keyof T;
-  cell?: (value: any) => string | number | null;
-};
-
-// Specific type for Prompt table columns
-export type PromptColumn = PromptTableColumn<Prompt>;
