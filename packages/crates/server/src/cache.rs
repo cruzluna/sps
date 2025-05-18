@@ -106,7 +106,7 @@ impl PromptDb {
                 parent TEXT,
                 branched BOOLEAN,
                 archived BOOLEAN,
-                created_at INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
             )",
             [],
         )?;

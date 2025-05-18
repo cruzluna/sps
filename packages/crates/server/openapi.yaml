@@ -172,7 +172,6 @@ components:
       - version
       - parent
       - created_at
-      - updated_at
       properties:
         archived:
           type:
@@ -202,10 +201,6 @@ components:
         parent:
           type: string
           description: The parent of the prompt
-        updated_at:
-          type: integer
-          format: int64
-          description: The last update date of the prompt
         version:
           type: integer
           format: int32
