@@ -4,3 +4,7 @@
 Cargo.lock
 target/
 
+*.db
+*.db-shm
+*.db-wal
+
