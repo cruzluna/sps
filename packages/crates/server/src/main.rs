@@ -9,6 +9,7 @@ use axum::{
 };
 use cache::{DatabaseError, PromptDb};
 use log::{debug, error, info};
+use std::env;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
@@ -200,7 +201,7 @@ async fn update_prompt(
     Path(id): Path<String>,
     Json(prompt): Json<UpdatePromptRequest>,
 ) -> Result<String, UpdatePromptError> {
-    info!("Updating prompt: {:?}", prompt);
+    info!("Updating prompt: {}", id);
 
     let cache = state.cache.lock().await;
     cache.update_prompt(prompt.into()).map_err(|e| {
@@ -327,11 +328,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+
     write_openapi_spec().expect("Failed to write OpenAPI spec to file");
 
     // TODO: Add SQL database as fallback
     // TODO: Object storage for long term storage
-    let cache = PromptDb::new()?;
+
+    let stage = env::var("STAGE").unwrap_or_else(|_| "dev".to_string());
+    let db_path = match stage.as_str() {
+        "prod" => {
+            let data_dir = env::var("DATA_DIR").expect("DATA_DIR must be set");
+            format!("{}/prompts-prod.db", data_dir)
+        }
+        "dev" => "prompts-dev.db".to_string(),
+        _ => panic!("Invalid stage: {}", stage),
+    };
+    info!("Stage: {}", stage);
+
+    let cache = PromptDb::new(&db_path)?;
     let state = AppState {
         cache: Arc::new(Mutex::new(cache)),
     };
@@ -348,10 +364,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    info!("Server running on http://0.0.0.0:3000");
-    info!("Swagger UI available at http://0.0.0.0:3000/swagger-ui/");
+    info!("Server running on http://{}", addr);
+    info!("Swagger UI available at http://{}/swagger-ui/", addr);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
     Ok(())
 }

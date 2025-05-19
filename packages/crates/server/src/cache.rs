@@ -1,4 +1,4 @@
-use log::error;
+use log::{error, info};
 use rusqlite::{params, Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -88,9 +88,9 @@ pub struct PromptDb {
 }
 
 impl PromptDb {
-    pub fn new() -> Result<Self> {
-        // TODO: Move this to a better location
-        let conn = Connection::open("prompts.db")?;
+    pub fn new(db_path: &str) -> Result<Self> {
+        info!("Opening database: {}", db_path);
+        let conn = Connection::open(db_path)?;
 
         // Enable WAL mode for better concurrency and performance
         conn.pragma_update(None, "journal_mode", "WAL")?;
@@ -128,6 +128,7 @@ impl PromptDb {
     }
 
     pub fn insert_prompt(&self, prompt: DbPrompt) -> Result<DbPrompt> {
+        info!("Inserting: {}", prompt.id);
         self.conn.execute(
             "INSERT INTO prompts (id, version, content, parent, branched, archived, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",

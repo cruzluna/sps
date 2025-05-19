@@ -1,0 +1,15 @@
+# SQLite files
+*.db
+*.db-shm
+*.db-wal
+
+# Rust
+/target
+**/*.rs.bk
+
+# IDE
+.cursor/
+
+# Git
+.git/
+.gitignore 
