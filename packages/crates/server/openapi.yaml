@@ -55,6 +55,12 @@ paths:
       tags: []
       summary: Update prompt
       operationId: update_prompt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePromptRequest'
+        required: true
       responses:
         '200':
           description: Successly updated prompt
@@ -111,6 +117,12 @@ paths:
       tags: []
       summary: Update prompt metadata
       operationId: update_prompt_metadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMetadataRequest'
+        required: true
       responses:
         '200':
           description: Successly updated prompt metadata
@@ -230,3 +242,54 @@ components:
           items:
             type: string
           description: Tags of the prompt ie [react, typescript, etc.]
+    UpdateMetadataRequest:
+      type: object
+      required:
+      - id
+      properties:
+        category:
+          type:
+          - string
+          - 'null'
+          description: The category of the prompt
+        description:
+          type:
+          - string
+          - 'null'
+          description: The description of the prompt
+        id:
+          type: string
+          description: The id of the prompt
+        name:
+          type:
+          - string
+          - 'null'
+          description: The name of the prompt
+        tags:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          description: The tags of the prompt
+    UpdatePromptRequest:
+      type: object
+      required:
+      - id
+      - content
+      - parent
+      properties:
+        branched:
+          type:
+          - boolean
+          - 'null'
+          description: Whether the updated prompt is branched
+        content:
+          type: string
+          description: The content of the updated prompt
+        id:
+          type: string
+          description: The id of the prompt to update
+        parent:
+          type: string
+          description: The parent of the updated prompt. Most times its the same as the id of the prompt to update.

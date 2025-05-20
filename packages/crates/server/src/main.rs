@@ -189,6 +189,7 @@ async fn create_prompt(
 #[utoipa::path(
     put,
     path = "/prompt/{id}",
+    request_body = UpdatePromptRequest,
     responses(
         (status = StatusCode::OK, description = "Successly updated prompt", body = String),
         (status = StatusCode::NOT_FOUND, description = "Prompt not found"),
@@ -219,6 +220,7 @@ async fn update_prompt(
 #[utoipa::path(
     put,
     path = "/prompt/{id}/metadata",
+    request_body = UpdateMetadataRequest,
     responses(
         (status = StatusCode::OK, description = "Successly updated prompt metadata", body = String),
         (status = StatusCode::NOT_FOUND, description = "Prompt not found"),
