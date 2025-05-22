@@ -118,3 +118,15 @@ impl From<DbPromptMetadata> for PromptMetadata {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+pub struct GetPromptsRequest {
+    /// The category of the prompts to return
+    pub category: Option<String>,
+    /// The pagination offset to start from (0-based)
+    pub from: Option<i32>,
+    /// The pagination offset to end at (exclusive)
+    pub to: Option<i32>,
+    /// The number of prompts to return
+    pub size: Option<i32>,
+}

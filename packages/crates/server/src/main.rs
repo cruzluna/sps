@@ -1,4 +1,6 @@
-use api_models::{CreatePromptRequest, Prompt, UpdateMetadataRequest, UpdatePromptRequest};
+use api_models::{
+    CreatePromptRequest, GetPromptsRequest, Prompt, UpdateMetadataRequest, UpdatePromptRequest,
+};
 use axum::{
     body::Body,
     extract::{Path, Query, State},
@@ -85,11 +87,68 @@ async fn get_prompt_content(
         error!("Failed to get prompt content for id {}: {:?}", id, e);
         match e {
             DatabaseError::NotFound => GetPromptError::NotFound,
-            DatabaseError::UnhandledError => GetPromptError::InternalServerError,
+            _ => GetPromptError::InternalServerError,
         }
     })?;
 
     Ok(Json(content))
+}
+
+/// Get list of prompts with pagination
+#[utoipa::path(
+    get,
+    path = "/prompts",
+    params(
+        ("category" = String, Query, description = "The category of the prompts to return"),
+        ("from" = u32, Query, description = "The pagination offset to start from (0-based)"),
+        ("to" = u32, Query, description = "The pagination offset to end at (exclusive)"),
+        ("size" = u32, Query, description = "The number of prompts to return")
+    ),
+    responses(
+        (status = StatusCode::OK, description = "Successly retrieved all prompts", body = Vec<Prompt>),
+        (status = StatusCode::BAD_REQUEST, description = "Invalid request body")
+    )
+)]
+#[axum_macros::debug_handler]
+async fn get_prompts(
+    State(state): State<AppState>,
+    Query(params): Query<GetPromptsRequest>,
+) -> Result<Json<Vec<Prompt>>, GetPromptsError> {
+    let cache = state.cache.lock().await;
+    let prompts = cache
+        .get_prompts(
+            params.category,
+            params.from.unwrap_or(0) as u32,
+            params.to.unwrap_or(10) as u32,
+            params.size.unwrap_or(10) as u32,
+        )
+        .map_err(|e| {
+            error!("Failed to get prompts: {:?}", e);
+            match e {
+                DatabaseError::InvalidRequest => GetPromptsError::InvalidRequest,
+                _ => GetPromptsError::InternalServerError,
+            }
+        })?;
+
+    let prompts = prompts.into_iter().map(Prompt::from).collect();
+
+    Ok(Json(prompts))
+}
+
+enum GetPromptsError {
+    InvalidRequest,
+    InternalServerError,
+}
+
+impl IntoResponse for GetPromptsError {
+    fn into_response(self) -> Response<Body> {
+        let status = match self {
+            Self::InvalidRequest => StatusCode::BAD_REQUEST,
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        status.into_response()
+    }
 }
 
 enum DeletePromptError {
@@ -209,7 +268,7 @@ async fn update_prompt(
         error!("Database error: {:?}", e);
         match e {
             DatabaseError::NotFound => UpdatePromptError::NotFound,
-            DatabaseError::UnhandledError => UpdatePromptError::InternalServerError,
+            _ => UpdatePromptError::InternalServerError,
         }
     })?;
 
@@ -241,7 +300,7 @@ async fn update_prompt_metadata(
             error!("Database error: {:?}", e);
             match e {
                 DatabaseError::NotFound => UpdateMetadataError::NotFound,
-                DatabaseError::UnhandledError => UpdateMetadataError::InternalServerError,
+                _ => UpdateMetadataError::InternalServerError,
             }
         })?;
 
@@ -294,6 +353,7 @@ async fn delete_prompt(
     paths(
         get_prompt,
         get_prompt_content,
+        get_prompts,
         create_prompt,
         update_prompt,
         update_prompt_metadata,
@@ -362,6 +422,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .route("/prompt/{id}/content", get(get_prompt_content))
         .route("/prompt/{id}/metadata", put(update_prompt_metadata))
+        .route("/prompts", get(get_prompts))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(TraceLayer::new_for_http())
         .with_state(state);

@@ -134,6 +134,53 @@ paths:
           description: Invalid request body
         '404':
           description: Prompt not found
+  /prompts:
+    get:
+      tags: []
+      summary: Get list of prompts with pagination
+      operationId: get_prompts
+      parameters:
+      - name: category
+        in: query
+        description: The category of the prompts to return
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: The pagination offset to start from (0-based)
+        required: true
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
+      - name: to
+        in: query
+        description: The pagination offset to end at (exclusive)
+        required: true
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
+      - name: size
+        in: query
+        description: The number of prompts to return
+        required: true
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
+      responses:
+        '200':
+          description: Successly retrieved all prompts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Prompt'
+        '400':
+          description: Invalid request body
 components:
   schemas:
     CreatePromptRequest:

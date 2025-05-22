@@ -1,7 +1,10 @@
 use log::{error, info};
-use rusqlite::{params, Connection, Result};
+use rusqlite::{params, Connection, Result, Statement};
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    clone,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use uuid::Uuid;
 
 use crate::api_models::{CreatePromptRequest, UpdatePromptRequest};
@@ -10,6 +13,18 @@ use crate::api_models::{CreatePromptRequest, UpdatePromptRequest};
 pub enum DatabaseError {
     NotFound,
     UnhandledError,
+    InvalidRequest,
+}
+
+impl From<rusqlite::Error> for DatabaseError {
+    fn from(err: rusqlite::Error) -> Self {
+        match err {
+            // Map specific rusqlite errors to more semantic DatabaseError variants
+            rusqlite::Error::QueryReturnedNoRows => DatabaseError::NotFound,
+            // TBD
+            _ => DatabaseError::UnhandledError,
+        }
+    }
 }
 
 // impl Display for DatabaseError {
@@ -200,6 +215,82 @@ impl PromptDb {
                 }
             })?;
         Ok(content)
+    }
+
+    pub fn get_prompts(
+        &self,
+        category: Option<String>,
+        from: u32,
+        to: u32,
+        limit: u32,
+    ) -> Result<Vec<DbPrompt>, DatabaseError> {
+        if from > to || limit <= 0 {
+            error!("Invalid request: from={}, to={}, limit={}", from, to, limit);
+            return Err(DatabaseError::InvalidRequest);
+        }
+
+        let offset: u32 = to - from;
+        let mut stmt: Statement;
+
+        if category.is_none() {
+            stmt = self
+                .conn
+                .prepare(
+                    "SELECT p.* FROM prompts p 
+                     INNER JOIN metadata m ON p.id = m.id 
+                     LIMIT ?1 OFFSET ?2",
+                )
+                .map_err(|e| {
+                    error!("Failed to prepare statement for get_prompts: {}", e);
+                    DatabaseError::UnhandledError
+                })?;
+
+            let prompts = stmt
+                .query_map([limit, offset], |row| {
+                    Ok(DbPrompt {
+                        id: row.get(0)?,
+                        version: row.get(1)?,
+                        content: row.get(2)?,
+                        parent: row.get(3)?,
+                        branched: row.get(4)?,
+                        archived: row.get(5)?,
+                        created_at: row.get(6)?,
+                    })
+                })?
+                .map(|res| res.map_err(Into::into))
+                .collect::<Result<Vec<DbPrompt>, DatabaseError>>()?;
+
+            return Ok(prompts);
+        }
+        stmt = self
+            .conn
+            .prepare(
+                "SELECT p.* FROM prompts p 
+                 INNER JOIN metadata m ON p.id = m.id 
+                 WHERE m.category = ?1 
+                 LIMIT ?2 OFFSET ?3",
+            )
+            .map_err(|e| {
+                error!("Failed to prepare statement for get_prompts: {}", e);
+                DatabaseError::UnhandledError
+            })?;
+
+        let prompts = stmt
+            .query_map(params![category.unwrap(), limit, offset], |row| {
+                Ok(DbPrompt {
+                    id: row.get(0)?,
+                    version: row.get(1)?,
+                    content: row.get(2)?,
+                    parent: row.get(3)?,
+                    branched: row.get(4)?,
+                    archived: row.get(5)?,
+                    created_at: row.get(6)?,
+                })
+            })?
+            .map(|res| res.map_err(Into::into))
+            .collect();
+
+        prompts
     }
 
     pub fn get_prompt(&self, id: &str) -> Result<Option<DbPrompt>, DatabaseError> {
