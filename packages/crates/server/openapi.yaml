@@ -12,6 +12,27 @@ servers:
   description: Production path
 paths:
   /prompt:
+    put:
+      tags: []
+      summary: Update prompt
+      operationId: update_prompt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePromptRequest'
+        required: true
+      responses:
+        '200':
+          description: Successly updated prompt
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Invalid request body
+        '404':
+          description: Prompt not found
     post:
       tags: []
       summary: Create prompt
@@ -31,6 +52,28 @@ paths:
                 $ref: '#/components/schemas/Prompt'
         '400':
           description: Invalid request body
+  /prompt/metadata:
+    put:
+      tags: []
+      summary: Update prompt metadata
+      operationId: update_prompt_metadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMetadataRequest'
+        required: true
+      responses:
+        '200':
+          description: Successly updated prompt metadata
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Invalid request body
+        '404':
+          description: Prompt not found
   /prompt/{id}:
     get:
       tags: []
@@ -54,27 +97,6 @@ paths:
           description: Prompt not found
         '500':
           description: Internal server error
-    put:
-      tags: []
-      summary: Update prompt
-      operationId: update_prompt
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdatePromptRequest'
-        required: true
-      responses:
-        '200':
-          description: Successly updated prompt
-          content:
-            text/plain:
-              schema:
-                type: string
-        '400':
-          description: Invalid request body
-        '404':
-          description: Prompt not found
     delete:
       tags: []
       summary: Delete prompt
@@ -115,28 +137,6 @@ paths:
           description: Prompt not found
         '500':
           description: Internal server error
-  /prompt/{id}/metadata:
-    put:
-      tags: []
-      summary: Update prompt metadata
-      operationId: update_prompt_metadata
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateMetadataRequest'
-        required: true
-      responses:
-        '200':
-          description: Successly updated prompt metadata
-          content:
-            text/plain:
-              schema:
-                type: string
-        '400':
-          description: Invalid request body
-        '404':
-          description: Prompt not found
   /prompts:
     get:
       tags: []

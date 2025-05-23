@@ -247,7 +247,7 @@ async fn create_prompt(
 /// Update prompt
 #[utoipa::path(
     put,
-    path = "/prompt/{id}",
+    path = "/prompt",
     request_body = UpdatePromptRequest,
     responses(
         (status = StatusCode::OK, description = "Successly updated prompt", body = String),
@@ -258,10 +258,10 @@ async fn create_prompt(
 #[axum_macros::debug_handler]
 async fn update_prompt(
     State(state): State<AppState>,
-    Path(id): Path<String>,
     Json(prompt): Json<UpdatePromptRequest>,
 ) -> Result<String, UpdatePromptError> {
-    info!("Updating prompt: {}", id);
+    let id = prompt.id.clone();
+    info!("Updating prompt: {:?}", id);
 
     let cache = state.cache.lock().await;
     cache.update_prompt(prompt.into()).map_err(|e| {
@@ -278,7 +278,7 @@ async fn update_prompt(
 /// Update prompt metadata
 #[utoipa::path(
     put,
-    path = "/prompt/{id}/metadata",
+    path = "/prompt/metadata",
     request_body = UpdateMetadataRequest,
     responses(
         (status = StatusCode::OK, description = "Successly updated prompt metadata", body = String),
@@ -289,10 +289,10 @@ async fn update_prompt(
 #[axum_macros::debug_handler]
 async fn update_prompt_metadata(
     State(state): State<AppState>,
-    Path(id): Path<String>,
     Json(prompt): Json<UpdateMetadataRequest>,
 ) -> Result<String, UpdateMetadataError> {
-    info!("Updating prompt metadata: {:?}", prompt);
+    let id = prompt.id.clone();
+    info!("Updating metadata for prompt: {:?}", id);
     let cache = state.cache.lock().await;
     cache
         .update_prompt_metadata(&id, prompt.into())
@@ -418,13 +418,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let app = Router::new()
-        .route("/prompt", post(create_prompt))
-        .route(
-            "/prompt/{id}",
-            get(get_prompt).put(update_prompt).delete(delete_prompt),
-        )
+        .route("/prompt", post(create_prompt).put(update_prompt))
+        .route("/prompt/{id}", get(get_prompt).delete(delete_prompt))
         .route("/prompt/{id}/content", get(get_prompt_content))
-        .route("/prompt/{id}/metadata", put(update_prompt_metadata))
+        .route("/prompt/metadata", put(update_prompt_metadata))
         .route("/prompts", get(get_prompts))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(TraceLayer::new_for_http())
