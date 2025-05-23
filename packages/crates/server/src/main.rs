@@ -364,6 +364,9 @@ async fn delete_prompt(
         version = "0.0.1",
         description = "Simple prompt storage API that enables users to store and retrieve prompts, no longer requiring new deployments for
         prompt updates."
+    ),
+    servers(
+        (url = "https://api.cruzluna.dev", description = "Production path")
     )
 )]
 struct ApiDoc;

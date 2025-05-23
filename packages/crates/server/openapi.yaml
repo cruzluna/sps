@@ -7,6 +7,9 @@ info:
   license:
     name: ''
   version: 0.0.1
+servers:
+- url: https://api.cruzluna.dev
+  description: Production path
 paths:
   /prompt:
     post:

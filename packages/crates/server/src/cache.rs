@@ -1,10 +1,7 @@
 use log::{error, info};
 use rusqlite::{params, Connection, Result, Statement};
 use serde::{Deserialize, Serialize};
-use std::{
-    clone,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use crate::api_models::{CreatePromptRequest, UpdatePromptRequest};
