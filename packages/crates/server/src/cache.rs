@@ -37,7 +37,7 @@ pub fn now_timestamp() -> i64 {
         .as_secs() as i64
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DbPrompt {
     pub id: String,
     pub version: i32,
@@ -47,11 +47,31 @@ pub struct DbPrompt {
     // TODO: add an archived date?
     pub archived: Option<bool>,
     pub created_at: i64,
+    pub metadata: Option<DbPromptMetadata>,
 }
 
 impl From<CreatePromptRequest> for DbPrompt {
     fn from(prompt: CreatePromptRequest) -> Self {
         let id = Uuid::new_v4().to_string();
+        let now = now_timestamp();
+
+        let metadata = if prompt.name.is_some()
+            || prompt.description.is_some()
+            || prompt.category.is_some()
+            || prompt.tags.is_some()
+        {
+            Some(DbPromptMetadata {
+                id: id.clone(),
+                name: prompt.name,
+                description: prompt.description,
+                category: prompt.category,
+                tags: prompt.tags,
+                updated_at: now,
+            })
+        } else {
+            None
+        };
+
         Self {
             id: id.clone(),
             version: 1,
@@ -59,7 +79,8 @@ impl From<CreatePromptRequest> for DbPrompt {
             parent: prompt.parent.unwrap_or(id.clone()),
             branched: prompt.branched,
             archived: Some(false),
-            created_at: now_timestamp(),
+            created_at: now,
+            metadata,
         }
     }
 }
@@ -74,11 +95,12 @@ impl From<UpdatePromptRequest> for DbPrompt {
             branched: prompt.branched,
             archived: Some(false),
             created_at: now_timestamp(),
+            metadata: None,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DbPromptMetadata {
     // Reference to the prompt id
     pub id: String,
@@ -155,8 +177,25 @@ impl PromptDb {
             ],
         )?;
 
+        if let Some(metadata) = &prompt.metadata {
+            info!("Inserting metadata for prompt: {}", prompt.id);
+            self.conn.execute(
+                "INSERT INTO metadata (id, name, description, category, tags, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    &metadata.id,
+                    &metadata.name,
+                    &metadata.description,
+                    &metadata.category,
+                    &metadata.tags_to_string(),
+                    &metadata.updated_at
+                ],
+            )?;
+        }
+
         Ok(prompt)
     }
+
     pub fn get_prompt_content(&self, id: &str) -> Result<String, DatabaseError> {
         let mut stmt = self
             .conn
@@ -214,6 +253,7 @@ impl PromptDb {
         Ok(content)
     }
 
+    // For now don't return metadata since this is just a ui endpoint for now
     pub fn get_prompts(
         &self,
         category: Option<String>,
@@ -252,6 +292,7 @@ impl PromptDb {
                         branched: row.get(4)?,
                         archived: row.get(5)?,
                         created_at: row.get(6)?,
+                        metadata: None,
                     })
                 })?
                 .map(|res| res.map_err(Into::into))
@@ -282,6 +323,7 @@ impl PromptDb {
                     branched: row.get(4)?,
                     archived: row.get(5)?,
                     created_at: row.get(6)?,
+                    metadata: None,
                 })
             })?
             .map(|res| res.map_err(Into::into))
@@ -290,16 +332,70 @@ impl PromptDb {
         prompts
     }
 
-    pub fn get_prompt(&self, id: &str) -> Result<Option<DbPrompt>, DatabaseError> {
+    pub fn get_prompt(
+        &self,
+        id: &str,
+        metadata: Option<bool>,
+    ) -> Result<Option<DbPrompt>, DatabaseError> {
+        if metadata.is_some_and(|m| m) {
+            let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT p.id, p.version, p.content, p.parent, p.branched, p.archived, p.created_at,
+                        m.name, m.description, m.category, m.tags, m.updated_at
+                 FROM prompts p 
+                 LEFT JOIN metadata m ON p.id = m.id 
+                 WHERE p.id = ?1",
+            )
+            .map_err(|e| {
+                error!("Failed to prepare statement for get_prompt with metadata: {}", e);
+                DatabaseError::UnhandledError
+            })?;
+
+            let prompt_with_metadata = stmt.query_row(params![id], |row| {
+                Ok(DbPrompt {
+                    id: row.get(0)?,
+                    version: row.get(1)?,
+                    content: row.get(2)?,
+                    parent: row.get(3)?,
+                    branched: row.get(4)?,
+                    archived: row.get(5)?,
+                    created_at: row.get(6)?,
+                    metadata: Some(DbPromptMetadata {
+                        id: row.get(7)?,
+                        name: row.get(8)?,
+                        description: row.get(9)?,
+                        category: row.get(10)?,
+                        tags: row
+                            .get::<_, Option<String>>(11)?
+                            .map(|tags| tags.split(',').map(|s| s.to_string()).collect()),
+                        updated_at: row.get(12)?,
+                    }),
+                })
+            });
+
+            return match prompt_with_metadata {
+                Ok(prompt_with_metadata) => Ok(Some(prompt_with_metadata)),
+                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+                Err(e) => {
+                    error!("Database error while getting prompt with metadata: {}", e);
+                    Err(DatabaseError::UnhandledError)
+                }
+            };
+        }
+
         let mut stmt = self
             .conn
             .prepare("SELECT * FROM prompts WHERE id = ?1")
             .map_err(|e| {
-                error!("Failed to prepare statement for get_prompt: {}", e);
+                error!(
+                    "Failed to prepare statement for get_prompt without metadata: {}",
+                    e
+                );
                 DatabaseError::UnhandledError
             })?;
 
-        let prompt = stmt.query_row(params![id], |row| {
+        let prompt_without_metadata = stmt.query_row(params![id], |row| {
             Ok(DbPrompt {
                 id: row.get(0)?,
                 version: row.get(1)?,
@@ -308,25 +404,31 @@ impl PromptDb {
                 branched: row.get(4)?,
                 archived: row.get(5)?,
                 created_at: row.get(6)?,
+                metadata: None,
             })
         });
 
-        match prompt {
+        return match prompt_without_metadata {
             Ok(prompt) => Ok(Some(prompt)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => {
                 error!("Database error while getting prompt: {}", e);
                 Err(DatabaseError::UnhandledError)
             }
-        }
+        };
     }
 
     /// Insert a new version of the prompt
     pub fn update_prompt(&self, prompt: DbPrompt) -> Result<String, DatabaseError> {
-        let original_prompt = self.get_prompt(&prompt.id)?.ok_or_else(|| {
+        let original_prompt = self.get_prompt(&prompt.id, None)?.ok_or_else(|| {
             error!("Prompt not found for update with id: {}", prompt.id);
             DatabaseError::NotFound
         })?;
+
+        if let Some(metadata) = prompt.metadata.clone() {
+            info!("Updating prompt metadata for prompt: {}", prompt.id);
+            self.update_prompt_metadata(&prompt.id, metadata)?;
+        }
 
         let mut new_prompt = prompt;
         new_prompt.version = original_prompt.version + 1;

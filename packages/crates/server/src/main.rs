@@ -22,12 +22,13 @@ use utoipa_swagger_ui::SwaggerUi;
 mod api_models;
 mod cache;
 
-/// Get prompt
+/// Get entire prompt with option to include metadata
 #[utoipa::path(
     get,
     path = "/prompt/{id}",
     params(
-        ("id" = String, Path, description = "Prompt identifier")
+        ("id" = String, Path, description = "Prompt identifier"),
+        ("metadata" = Option<bool>, Query, description = "Whether to include metadata in the response")
     ),
     responses(
         (status = StatusCode::OK, description = "Successly retrieved prompt", body = String),
@@ -39,12 +40,13 @@ mod cache;
 async fn get_prompt(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    Query(metadata): Query<Option<bool>>,
 ) -> Result<Json<Prompt>, GetPromptError> {
     info!("Requested prompt with id: {}", id);
 
     let cache = state.cache.lock().await;
     let db_prompt = cache
-        .get_prompt(&id)
+        .get_prompt(&id, metadata)
         .map_err(|e| {
             error!("Failed to get prompt for id {}: {:?}", id, e);
             GetPromptError::InternalServerError
@@ -62,7 +64,7 @@ async fn get_prompt(
     path = "/prompt/{id}/content",
     params(
         ("id" = String, Path, description = "Prompt identifier"),
-        ("latest" = bool, Query, description = "Latest version of the prompt")
+        ("latest" = Option<bool>, Query, description = "Latest version of the prompt")
     ),
     responses(
         (status = StatusCode::OK, description = "Successly retrieved prompt content", body = String),
@@ -74,14 +76,14 @@ async fn get_prompt(
 async fn get_prompt_content(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Query(latest): Query<bool>,
+    Query(latest): Query<Option<bool>>,
 ) -> Result<Json<String>, GetPromptError> {
     info!("Requested prompt with id: {}", id);
 
     let cache = state.cache.lock().await;
     let content = match latest {
-        true => cache.get_prompt_content_latest_version(&id),
-        false => cache.get_prompt_content(&id),
+        Some(true) => cache.get_prompt_content_latest_version(&id),
+        _ => cache.get_prompt_content(&id),
     }
     .map_err(|e| {
         error!("Failed to get prompt content for id {}: {:?}", id, e);
@@ -100,9 +102,9 @@ async fn get_prompt_content(
     path = "/prompts",
     params(
         ("category" = String, Query, description = "The category of the prompts to return"),
-        ("from" = u32, Query, description = "The pagination offset to start from (0-based)"),
-        ("to" = u32, Query, description = "The pagination offset to end at (exclusive)"),
-        ("size" = u32, Query, description = "The number of prompts to return")
+        ("from" = Option<u32>, Query, description = "The pagination offset to start from (0-based)"),
+        ("to" = Option<u32>, Query, description = "The pagination offset to end at (exclusive)"),
+        ("size" = Option<u32>, Query, description = "The number of prompts to return")
     ),
     responses(
         (status = StatusCode::OK, description = "Successly retrieved all prompts", body = Vec<Prompt>),
