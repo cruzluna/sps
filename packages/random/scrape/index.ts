@@ -4,7 +4,7 @@ import { SystemPromptStorage } from "system-prompt-storage";
 console.log("Hello via Bun!");
 const client = new SystemPromptStorage({
     apiKey: "empty",
-    baseURL: "http://localhost:3000",
+    // apiKey: process.env.SYSTEM_PROMPT_STORAGE_API_KEY,
 });
 
 const sections = [
@@ -23,7 +23,7 @@ const sections = [
                 .map((code) => (code as HTMLElement).textContent || "");
         console.log(rules);
         for(const rule of rules) {
-            const prompt = await client.prompt.create({
+            const prompt = await client.prompts.create({
                 content: rule,
                 name: section,
                 tags: [section],
