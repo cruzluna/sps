@@ -152,7 +152,7 @@ paths:
       - name: category
         in: query
         description: The category of the prompts to return
-        required: true
+        required: false
         schema:
           type: string
       - name: from

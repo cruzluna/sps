@@ -101,7 +101,7 @@ async fn get_prompt_content(
     get,
     path = "/prompts",
     params(
-        ("category" = String, Query, description = "The category of the prompts to return"),
+        ("category" = Option<String>, Query, description = "The category of the prompts to return"),
         ("from" = Option<u32>, Query, description = "The pagination offset to start from (0-based)"),
         ("to" = Option<u32>, Query, description = "The pagination offset to end at (exclusive)"),
         ("size" = Option<u32>, Query, description = "The number of prompts to return")
