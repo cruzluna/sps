@@ -15,7 +15,8 @@ servers:
 paths:
   /prompt:
     put:
-      tags: []
+      tags:
+      - routes
       summary: Update prompt
       operationId: update_prompt
       requestBody:
@@ -36,7 +37,8 @@ paths:
         '404':
           description: Prompt not found
     post:
-      tags: []
+      tags:
+      - routes
       summary: Create prompt
       operationId: create_prompt
       requestBody:
@@ -56,7 +58,8 @@ paths:
           description: Invalid request body
   /prompt/metadata:
     put:
-      tags: []
+      tags:
+      - routes
       summary: Update prompt metadata
       operationId: update_prompt_metadata
       requestBody:
@@ -78,7 +81,8 @@ paths:
           description: Prompt not found
   /prompt/{id}:
     get:
-      tags: []
+      tags:
+      - routes
       summary: Get entire prompt with option to include metadata
       operationId: get_prompt
       parameters:
@@ -106,7 +110,8 @@ paths:
         '500':
           description: Internal server error
     delete:
-      tags: []
+      tags:
+      - routes
       summary: Delete prompt
       operationId: delete_prompt
       responses:
@@ -118,7 +123,8 @@ paths:
           description: Internal server error
   /prompt/{id}/content:
     get:
-      tags: []
+      tags:
+      - routes
       summary: Get prompt content
       operationId: get_prompt_content
       parameters:
@@ -147,7 +153,8 @@ paths:
           description: Internal server error
   /prompts:
     get:
-      tags: []
+      tags:
+      - routes
       summary: Get list of prompts with pagination
       operationId: get_prompts
       parameters:

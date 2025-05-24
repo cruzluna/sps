@@ -1,3 +1,8 @@
+use axum::{
+    body::Body,
+    http::{Response, StatusCode},
+    response::IntoResponse,
+};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -139,4 +144,101 @@ pub struct GetPromptContentRequest {
 pub struct GetPromptRequest {
     /// Whether to include metadata in the response
     pub metadata: Option<bool>,
+}
+
+// TODO: https://docs.rs/axum-derive-error/latest/axum_derive_error/
+pub enum GetPromptError {
+    NotFound,
+    InternalServerError,
+}
+
+impl IntoResponse for GetPromptError {
+    fn into_response(self) -> Response<Body> {
+        let status = match self {
+            Self::NotFound => StatusCode::NOT_FOUND,
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        status.into_response()
+    }
+}
+pub enum DeletePromptError {
+    NotFoundError,
+    InternalServerError,
+}
+
+impl IntoResponse for DeletePromptError {
+    fn into_response(self) -> Response<Body> {
+        let status = match self {
+            Self::NotFoundError => StatusCode::NOT_FOUND,
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        status.into_response()
+    }
+}
+
+pub enum GetPromptsError {
+    InvalidRequest,
+    InternalServerError,
+}
+
+impl IntoResponse for GetPromptsError {
+    fn into_response(self) -> Response<Body> {
+        let status = match self {
+            Self::InvalidRequest => StatusCode::BAD_REQUEST,
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        status.into_response()
+    }
+}
+
+// TODO: https://docs.rs/axum-derive-error/latest/axum_derive_error/
+pub enum CreatePromptError {
+    InvalidRequestBody,
+    InternalServerError,
+}
+
+impl IntoResponse for CreatePromptError {
+    fn into_response(self) -> Response<Body> {
+        let status = match self {
+            Self::InvalidRequestBody => StatusCode::BAD_REQUEST,
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        status.into_response()
+    }
+}
+
+pub enum UpdatePromptError {
+    NotFound,
+    InternalServerError,
+}
+
+impl IntoResponse for UpdatePromptError {
+    fn into_response(self) -> Response<Body> {
+        let status = match self {
+            Self::NotFound => StatusCode::NOT_FOUND,
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        status.into_response()
+    }
+}
+
+pub enum UpdateMetadataError {
+    NotFound,
+    InternalServerError,
+}
+
+impl IntoResponse for UpdateMetadataError {
+    fn into_response(self) -> Response<Body> {
+        let status = match self {
+            Self::NotFound => StatusCode::NOT_FOUND,
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        status.into_response()
+    }
 }
