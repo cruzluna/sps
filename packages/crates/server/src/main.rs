@@ -1,5 +1,6 @@
 use api_models::{
-    CreatePromptRequest, GetPromptsRequest, Prompt, UpdateMetadataRequest, UpdatePromptRequest,
+    CreatePromptRequest, GetPromptContentRequest, GetPromptRequest, GetPromptsRequest, Prompt,
+    UpdateMetadataRequest, UpdatePromptRequest,
 };
 use axum::{
     body::Body,
@@ -40,13 +41,13 @@ mod cache;
 async fn get_prompt(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Query(metadata): Query<Option<bool>>,
+    Query(params): Query<GetPromptRequest>,
 ) -> Result<Json<Prompt>, GetPromptError> {
     info!("Requested prompt with id: {}", id);
 
     let cache = state.cache.lock().await;
     let db_prompt = cache
-        .get_prompt(&id, metadata)
+        .get_prompt(&id, params.metadata)
         .map_err(|e| {
             error!("Failed to get prompt for id {}: {:?}", id, e);
             GetPromptError::InternalServerError
@@ -76,12 +77,12 @@ async fn get_prompt(
 async fn get_prompt_content(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Query(latest): Query<Option<bool>>,
+    Query(params): Query<GetPromptContentRequest>,
 ) -> Result<Json<String>, GetPromptError> {
     info!("Requested prompt with id: {}", id);
 
     let cache = state.cache.lock().await;
-    let content = match latest {
+    let content = match params.latest {
         Some(true) => cache.get_prompt_content_latest_version(&id),
         _ => cache.get_prompt_content(&id),
     }
@@ -102,9 +103,8 @@ async fn get_prompt_content(
     path = "/prompts",
     params(
         ("category" = Option<String>, Query, description = "The category of the prompts to return"),
-        ("from" = Option<u32>, Query, description = "The pagination offset to start from (0-based)"),
-        ("to" = Option<u32>, Query, description = "The pagination offset to end at (exclusive)"),
-        ("size" = Option<u32>, Query, description = "The number of prompts to return")
+        ("offset" = Option<u32>, Query, description = "The pagination offset to start from (0-based). Default is 0."),
+        ("limit" = Option<u32>, Query, description = "The number of prompts to return. Default is 10.")
     ),
     responses(
         (status = StatusCode::OK, description = "Successly retrieved all prompts", body = Vec<Prompt>),
@@ -116,13 +116,13 @@ async fn get_prompts(
     State(state): State<AppState>,
     Query(params): Query<GetPromptsRequest>,
 ) -> Result<Json<Vec<Prompt>>, GetPromptsError> {
+    info!("Requested prompts with params: {:?}", params);
     let cache = state.cache.lock().await;
     let prompts = cache
         .get_prompts(
             params.category,
-            params.from.unwrap_or(0) as u32,
-            params.to.unwrap_or(10) as u32,
-            params.size.unwrap_or(10) as u32,
+            params.offset.unwrap_or(0) as u32,
+            params.limit.unwrap_or(10) as u32,
         )
         .map_err(|e| {
             error!("Failed to get prompts: {:?}", e);
@@ -368,7 +368,8 @@ async fn delete_prompt(
         prompt updates."
     ),
     servers(
-        (url = "https://api.cruzluna.dev", description = "Production path")
+        (url = "https://api.cruzluna.dev", description = "Production path"),
+        (url = "http://localhost:8080", description = "Local path")
     )
 )]
 struct ApiDoc;
@@ -390,7 +391,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env()
-                .or_else(|_| EnvFilter::try_new("info,tower_http=warn"))
+                .or_else(|_| EnvFilter::try_new("debug,axum::rejection=trace,tower_http=warn"))
                 .unwrap(),
         )
         .init();

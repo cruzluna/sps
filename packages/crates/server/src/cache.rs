@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::{debug, error, info};
 use rusqlite::{params, Connection, Result, Statement};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -257,24 +257,25 @@ impl PromptDb {
     pub fn get_prompts(
         &self,
         category: Option<String>,
-        from: u32,
-        to: u32,
+        offset: u32,
         limit: u32,
     ) -> Result<Vec<DbPrompt>, DatabaseError> {
-        if from > to || limit <= 0 {
-            error!("Invalid request: from={}, to={}, limit={}", from, to, limit);
+        debug!(
+            "Getting prompts with params: category={:?}, offset={}, limit={}",
+            category, offset, limit
+        );
+        if limit <= 0 {
+            error!("Invalid request: limit={}", limit);
             return Err(DatabaseError::InvalidRequest);
         }
 
-        let offset: u32 = to - from;
         let mut stmt: Statement;
-
         if category.is_none() {
             stmt = self
                 .conn
                 .prepare(
                     "SELECT p.* FROM prompts p 
-                     INNER JOIN metadata m ON p.id = m.id 
+                     LEFT JOIN metadata m ON p.id = m.id 
                      LIMIT ?1 OFFSET ?2",
                 )
                 .map_err(|e| {
@@ -304,7 +305,7 @@ impl PromptDb {
             .conn
             .prepare(
                 "SELECT p.* FROM prompts p 
-                 INNER JOIN metadata m ON p.id = m.id 
+                 LEFT JOIN metadata m ON p.id = m.id 
                  WHERE m.category = ?1 
                  LIMIT ?2 OFFSET ?3",
             )

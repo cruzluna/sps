@@ -10,6 +10,8 @@ info:
 servers:
 - url: https://api.cruzluna.dev
   description: Production path
+- url: http://localhost:8080
+  description: Local path
 paths:
   /prompt:
     put:
@@ -155,25 +157,17 @@ paths:
         required: false
         schema:
           type: string
-      - name: from
+      - name: offset
         in: query
-        description: The pagination offset to start from (0-based)
+        description: The pagination offset to start from (0-based). Default is 0.
         required: false
         schema:
           type: integer
           format: int32
           minimum: 0
-      - name: to
+      - name: limit
         in: query
-        description: The pagination offset to end at (exclusive)
-        required: false
-        schema:
-          type: integer
-          format: int32
-          minimum: 0
-      - name: size
-        in: query
-        description: The number of prompts to return
+        description: The number of prompts to return. Default is 10.
         required: false
         schema:
           type: integer

@@ -124,9 +124,19 @@ pub struct GetPromptsRequest {
     /// The category of the prompts to return
     pub category: Option<String>,
     /// The pagination offset to start from (0-based)
-    pub from: Option<i32>,
-    /// The pagination offset to end at (exclusive)
-    pub to: Option<i32>,
+    pub offset: Option<i32>,
     /// The number of prompts to return
-    pub size: Option<i32>,
+    pub limit: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+pub struct GetPromptContentRequest {
+    /// Whether to get the latest version of the prompt
+    pub latest: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+pub struct GetPromptRequest {
+    /// Whether to include metadata in the response
+    pub metadata: Option<bool>,
 }
