@@ -1,4 +1,4 @@
-use crate::api_models::{CreatePromptRequest, UpdatePromptRequest};
+use crate::api_models::CreatePromptRequest;
 
 #[cfg(not(test))]
 use log::{debug, error, info};
@@ -91,21 +91,6 @@ impl From<CreatePromptRequest> for DbPrompt {
     }
 }
 
-impl From<UpdatePromptRequest> for DbPrompt {
-    fn from(prompt: UpdatePromptRequest) -> Self {
-        Self {
-            id: prompt.id,
-            version: 0,
-            content: prompt.content,
-            parent: prompt.parent,
-            branched: prompt.branched,
-            archived: Some(false),
-            created_at: now_timestamp(),
-            metadata: None,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DbPromptMetadata {
     // Reference to the prompt id
@@ -155,10 +140,10 @@ impl PromptDb {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS metadata (
                 id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                description TEXT NOT NULL,
-                category TEXT NOT NULL,
-                tags TEXT NOT NULL,
+                name TEXT,
+                description TEXT,
+                category TEXT,
+                tags TEXT,
                 updated_at INTEGER NOT NULL
             )",
             [],
@@ -473,6 +458,31 @@ impl PromptDb {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_get_prompt_without_metadata() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir
+            .path()
+            .join("test.db")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let db = PromptDb::new(&db_path).unwrap();
+        let inserted_prompt = db.insert_prompt(DbPrompt {
+            id: "123".to_string(),
+            version: 1,
+            content: "Hello, world!".to_string(),
+            parent: "123".to_string(),
+            branched: Some(false),
+            archived: Some(false),
+            created_at: now_timestamp(),
+            metadata: None,
+        });
+
+        assert_eq!(inserted_prompt.as_ref().unwrap().id, "123");
+    }
 
     #[test]
     fn test_get_prompt_content_latest_version() {

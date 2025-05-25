@@ -14,7 +14,7 @@ WORKDIR /app
 # Copy the entire project
 COPY . .
 
-ENV RUST_LOG=info
+ENV RUST_LOG=debug
 ENV PORT=8080
 ENV DATA_DIR=/data
 ENV STAGE=prod

@@ -27,18 +27,6 @@ pub struct CreatePromptRequest {
 }
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
-pub struct UpdatePromptRequest {
-    /// The id of the prompt to update
-    pub id: String,
-    /// The content of the updated prompt
-    pub content: String,
-    /// The parent of the updated prompt. Most times its the same as the id of the prompt to update.
-    pub parent: String,
-    /// Whether the updated prompt is branched
-    pub branched: Option<bool>,
-}
-
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
 pub struct UpdateMetadataRequest {
     /// The id of the prompt
     pub id: String,
