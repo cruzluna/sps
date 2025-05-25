@@ -1,7 +1,7 @@
 use crate::api_models::{
     CreatePromptError, CreatePromptRequest, DeletePromptError, GetPromptContentRequest,
     GetPromptError, GetPromptRequest, GetPromptsError, GetPromptsRequest, Prompt,
-    UpdateMetadataError, UpdateMetadataRequest, UpdatePromptError, UpdatePromptRequest,
+    UpdateMetadataError, UpdateMetadataRequest,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -140,8 +140,6 @@ pub async fn create_prompt(
     State(state): State<AppState>,
     Json(prompt): Json<CreatePromptRequest>,
 ) -> Result<String, CreatePromptError> {
-    info!("Creating prompt: {:?}", prompt);
-
     let cache = state.cache.lock().await;
     cache
         .insert_prompt(prompt.into())
