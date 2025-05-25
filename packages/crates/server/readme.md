@@ -29,3 +29,9 @@ Helpful commands
 
 Current Docker build times-
 - May 18: 53.5 seconds
+
+### Testing Sqlite stuff locally
+ex:
+sqlite3 prompts-dev.db "SELECT p.* FROM prompts p LEFT JOIN metadata m ON p.id = m.id LIMIT -1 OFFSET 0;"
+
+sqlite3 prompts-dev.db "SELECT content FROM prompts WHERE id='id-value' ORDER DESC limit 1"

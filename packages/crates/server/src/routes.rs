@@ -115,7 +115,7 @@ pub async fn get_prompts(
         .map_err(|e| {
             error!("Failed to get prompts: {:?}", e);
             match e {
-                DatabaseError::InvalidRequest => GetPromptsError::InvalidRequest,
+                DatabaseError::InvalidRequest(_) => GetPromptsError::InvalidRequest,
                 _ => GetPromptsError::InternalServerError,
             }
         })?;
@@ -125,7 +125,7 @@ pub async fn get_prompts(
     Ok(Json(prompts))
 }
 
-/// Create prompt
+/// Create prompt or update it by passing the parent id
 #[utoipa::path(
     post,
     path = "/prompt",
@@ -150,37 +150,6 @@ pub async fn create_prompt(
             CreatePromptError::InternalServerError
         })
         .map(|prompt| prompt.id)
-}
-
-/// Update prompt
-#[utoipa::path(
-    put,
-    path = "/prompt",
-    request_body = UpdatePromptRequest,
-    responses(
-        (status = StatusCode::OK, description = "Successly updated prompt", body = String),
-        (status = StatusCode::NOT_FOUND, description = "Prompt not found"),
-        (status = StatusCode::BAD_REQUEST, description = "Invalid request body")
-    )
-)]
-#[axum_macros::debug_handler]
-pub async fn update_prompt(
-    State(state): State<AppState>,
-    Json(prompt): Json<UpdatePromptRequest>,
-) -> Result<String, UpdatePromptError> {
-    let id = prompt.id.clone();
-    info!("Updating prompt: {:?}", id);
-
-    let cache = state.cache.lock().await;
-    cache.update_prompt(prompt.into()).map_err(|e| {
-        error!("Database error: {:?}", e);
-        match e {
-            DatabaseError::NotFound => UpdatePromptError::NotFound,
-            _ => UpdatePromptError::InternalServerError,
-        }
-    })?;
-
-    Ok(id)
 }
 
 /// Update prompt metadata

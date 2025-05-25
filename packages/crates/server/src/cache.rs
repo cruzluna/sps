@@ -1,16 +1,22 @@
+use crate::api_models::{CreatePromptRequest, UpdatePromptRequest};
+
+#[cfg(not(test))]
 use log::{debug, error, info};
 use rusqlite::{params, Connection, Result, Statement};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
+#[cfg(test)]
+use std::{println as info, println as error, println as debug};
 use uuid::Uuid;
 
-use crate::api_models::{CreatePromptRequest, UpdatePromptRequest};
-
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum DatabaseError {
+    #[error("record not found")]
     NotFound,
-    UnhandledError,
-    InvalidRequest,
+    #[error("unhanded error:`{0}`")]
+    UnhandledError(String),
+    #[error("invalid request:`{0}`")]
+    InvalidRequest(String),
 }
 
 impl From<rusqlite::Error> for DatabaseError {
@@ -19,7 +25,7 @@ impl From<rusqlite::Error> for DatabaseError {
             // Map specific rusqlite errors to more semantic DatabaseError variants
             rusqlite::Error::QueryReturnedNoRows => DatabaseError::NotFound,
             // TBD
-            _ => DatabaseError::UnhandledError,
+            _ => DatabaseError::UnhandledError(err.to_string()),
         }
     }
 }
@@ -200,24 +206,21 @@ impl PromptDb {
         let mut stmt = self
             .conn
             .prepare("SELECT content FROM prompts WHERE id = ?1")
-            .map_err(|e| {
+            .inspect_err(|e| {
                 error!(
                     "Failed to prepare statement for get_prompt_content: {:?}",
                     e
-                );
-                DatabaseError::UnhandledError
+                )
             })?;
 
         let content = stmt
             .query_row(params![id], |row| row.get(0))
-            .map_err(|e| match e {
+            .inspect_err(|e| match e {
                 rusqlite::Error::QueryReturnedNoRows => {
                     error!("No prompt found with id {}", id);
-                    DatabaseError::NotFound
                 }
                 _ => {
                     error!("Database error while getting prompt content: {:?}", e);
-                    DatabaseError::UnhandledError
                 }
             })?;
         Ok(content)
@@ -226,28 +229,25 @@ impl PromptDb {
     pub fn get_prompt_content_latest_version(&self, id: &str) -> Result<String, DatabaseError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT content FROM prompts WHERE id = ?1 ORDER DESC limit 1")
-            .map_err(|e| {
+            .prepare("SELECT content FROM prompts WHERE parent = ?1 ORDER by version DESC limit 1")
+            .inspect_err(|e| {
                 error!(
                     "Failed to prepare statement for get_prompt_content_latest_version: {}",
                     e
-                );
-                DatabaseError::UnhandledError
+                )
             })?;
 
         let content = stmt
             .query_row(params![id], |row| row.get(0))
-            .map_err(|e| match e {
+            .inspect_err(|e| match e {
                 rusqlite::Error::QueryReturnedNoRows => {
                     error!("No prompt found with id {} for latest version", id);
-                    DatabaseError::NotFound
                 }
                 _ => {
                     error!(
                         "Database error while getting latest prompt content: {:?}",
                         e
                     );
-                    DatabaseError::UnhandledError
                 }
             })?;
         Ok(content)
@@ -266,7 +266,9 @@ impl PromptDb {
         );
         if limit <= 0 {
             error!("Invalid request: limit={}", limit);
-            return Err(DatabaseError::InvalidRequest);
+            return Err(DatabaseError::InvalidRequest(
+                "Invalid limit value".to_string(),
+            ));
         }
 
         let mut stmt: Statement;
@@ -274,14 +276,11 @@ impl PromptDb {
             stmt = self
                 .conn
                 .prepare(
-                    "SELECT p.* FROM prompts p 
+                    "SELECT * FROM prompts p 
                      LEFT JOIN metadata m ON p.id = m.id 
                      LIMIT ?1 OFFSET ?2",
                 )
-                .map_err(|e| {
-                    error!("Failed to prepare statement for get_prompts: {}", e);
-                    DatabaseError::UnhandledError
-                })?;
+                .inspect_err(|e| error!("Failed to prepare statement for get_prompts: {}", e))?;
 
             let prompts = stmt
                 .query_map([limit, offset], |row| {
@@ -293,7 +292,16 @@ impl PromptDb {
                         branched: row.get(4)?,
                         archived: row.get(5)?,
                         created_at: row.get(6)?,
-                        metadata: None,
+                        metadata: Some(DbPromptMetadata {
+                            id: row.get(7)?,
+                            name: row.get(8)?,
+                            description: row.get(9)?,
+                            category: row.get(10)?,
+                            tags: row
+                                .get::<_, Option<String>>(11)?
+                                .map(|tags| tags.split(',').map(|s| s.to_string()).collect()),
+                            updated_at: row.get(12)?,
+                        }),
                     })
                 })?
                 .map(|res| res.map_err(Into::into))
@@ -304,56 +312,20 @@ impl PromptDb {
         stmt = self
             .conn
             .prepare(
-                "SELECT p.* FROM prompts p 
+                "SELECT * FROM prompts p 
                  LEFT JOIN metadata m ON p.id = m.id 
                  WHERE m.category = ?1 
                  LIMIT ?2 OFFSET ?3",
             )
-            .map_err(|e| {
-                error!("Failed to prepare statement for get_prompts: {}", e);
-                DatabaseError::UnhandledError
+            .inspect_err(|e| {
+                error!(
+                    "Failed to prepare statement for get_prompts with category: {}",
+                    e
+                )
             })?;
 
         let prompts = stmt
             .query_map(params![category.unwrap(), limit, offset], |row| {
-                Ok(DbPrompt {
-                    id: row.get(0)?,
-                    version: row.get(1)?,
-                    content: row.get(2)?,
-                    parent: row.get(3)?,
-                    branched: row.get(4)?,
-                    archived: row.get(5)?,
-                    created_at: row.get(6)?,
-                    metadata: None,
-                })
-            })?
-            .map(|res| res.map_err(Into::into))
-            .collect();
-
-        prompts
-    }
-
-    pub fn get_prompt(
-        &self,
-        id: &str,
-        metadata: Option<bool>,
-    ) -> Result<Option<DbPrompt>, DatabaseError> {
-        if metadata.is_some_and(|m| m) {
-            let mut stmt = self
-            .conn
-            .prepare(
-                "SELECT p.id, p.version, p.content, p.parent, p.branched, p.archived, p.created_at,
-                        m.name, m.description, m.category, m.tags, m.updated_at
-                 FROM prompts p 
-                 LEFT JOIN metadata m ON p.id = m.id 
-                 WHERE p.id = ?1",
-            )
-            .map_err(|e| {
-                error!("Failed to prepare statement for get_prompt with metadata: {}", e);
-                DatabaseError::UnhandledError
-            })?;
-
-            let prompt_with_metadata = stmt.query_row(params![id], |row| {
                 Ok(DbPrompt {
                     id: row.get(0)?,
                     version: row.get(1)?,
@@ -373,6 +345,54 @@ impl PromptDb {
                         updated_at: row.get(12)?,
                     }),
                 })
+            })?
+            .map(|res| res.map_err(Into::into))
+            .collect();
+
+        prompts
+    }
+
+    pub fn get_prompt(
+        &self,
+        id: &str,
+        metadata: Option<bool>,
+    ) -> Result<Option<DbPrompt>, DatabaseError> {
+        debug!(
+            "Getting prompt with id: {} and metadata: {:?}",
+            id, metadata
+        );
+        if metadata.is_some_and(|m| m) {
+            let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT p.id, p.version, p.content, p.parent, p.branched, p.archived, p.created_at,
+                        m.name, m.description, m.category, m.tags, m.updated_at
+                 FROM prompts p 
+                 LEFT JOIN metadata m ON p.id = m.id 
+                 WHERE p.id = ?1",
+            )
+            .inspect_err(|e| error!("Failed to prepare statement for get_prompt with metadata: {}", e))?;
+
+            let prompt_with_metadata = stmt.query_row(params![id], |row| {
+                Ok(DbPrompt {
+                    id: row.get(0)?,
+                    version: row.get(1)?,
+                    content: row.get(2)?,
+                    parent: row.get(3)?,
+                    branched: row.get(4)?,
+                    archived: row.get(5)?,
+                    created_at: row.get(6)?,
+                    metadata: Some(DbPromptMetadata {
+                        id: row.get(0)?,
+                        name: row.get(7)?,
+                        description: row.get(8)?,
+                        category: row.get(9)?,
+                        tags: row
+                            .get::<_, Option<String>>(10)?
+                            .map(|tags| tags.split(',').map(|s| s.to_string()).collect()),
+                        updated_at: row.get(11)?,
+                    }),
+                })
             });
 
             return match prompt_with_metadata {
@@ -380,7 +400,7 @@ impl PromptDb {
                 Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
                 Err(e) => {
                     error!("Database error while getting prompt with metadata: {}", e);
-                    Err(DatabaseError::UnhandledError)
+                    Err(DatabaseError::UnhandledError(e.to_string()))
                 }
             };
         }
@@ -388,12 +408,11 @@ impl PromptDb {
         let mut stmt = self
             .conn
             .prepare("SELECT * FROM prompts WHERE id = ?1")
-            .map_err(|e| {
+            .inspect_err(|e| {
                 error!(
                     "Failed to prepare statement for get_prompt without metadata: {}",
                     e
-                );
-                DatabaseError::UnhandledError
+                )
             })?;
 
         let prompt_without_metadata = stmt.query_row(params![id], |row| {
@@ -414,34 +433,9 @@ impl PromptDb {
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => {
                 error!("Database error while getting prompt: {}", e);
-                Err(DatabaseError::UnhandledError)
+                Err(DatabaseError::UnhandledError(e.to_string()))
             }
         };
-    }
-
-    /// Insert a new version of the prompt
-    pub fn update_prompt(&self, prompt: DbPrompt) -> Result<String, DatabaseError> {
-        let original_prompt = self.get_prompt(&prompt.id, None)?.ok_or_else(|| {
-            error!("Prompt not found for update with id: {}", prompt.id);
-            DatabaseError::NotFound
-        })?;
-
-        if let Some(metadata) = prompt.metadata.clone() {
-            info!("Updating prompt metadata for prompt: {}", prompt.id);
-            self.update_prompt_metadata(&prompt.id, metadata)?;
-        }
-
-        let mut new_prompt = prompt;
-        new_prompt.version = original_prompt.version + 1;
-        let new_prompt = self.insert_prompt(new_prompt).map_err(|e| {
-            error!("Failed to insert updated prompt: {}", e);
-            match e {
-                rusqlite::Error::QueryReturnedNoRows => DatabaseError::NotFound,
-                _ => DatabaseError::UnhandledError,
-            }
-        })?;
-
-        Ok(new_prompt.id)
     }
 
     pub fn update_prompt_metadata(
@@ -455,10 +449,8 @@ impl PromptDb {
             "UPDATE metadata SET name = ?2, description = ?3, category = ?4, tags = ?5, updated_at = ?7
              WHERE id = ?1",
             params![&id, &metadata.name, &metadata.description, &metadata.category, &metadata.tags_to_string(), now, now],
-        ).map_err(|e| {
-                error!("Failed to update prompt metadata: {:?}", e);
-                DatabaseError::UnhandledError
-            })?;
+        )
+        .inspect_err(|e| error!("Failed to update prompt metadata: {:?}", e))?;
 
         match rows_affected {
             0 => Err(DatabaseError::NotFound),
@@ -473,10 +465,280 @@ impl PromptDb {
                 "UPDATE prompts SET archived = true WHERE id = ?1",
                 params![id],
             )
-            .map_err(|e| {
-                error!("Failed to delete prompt with id {}: {}", id, e);
-                DatabaseError::UnhandledError
-            })?;
+            .inspect_err(|e| error!("Failed to delete prompt with id {}: {}", id, e))?;
         Ok(rows_affected > 0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_prompt_content_latest_version() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir
+            .path()
+            .join("test.db")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let db = PromptDb::new(&db_path).unwrap();
+        let inserted_prompt = db.insert_prompt(DbPrompt {
+            id: "123".to_string(),
+            version: 1,
+            content: "Hello, world!".to_string(),
+            parent: "123".to_string(),
+            branched: Some(false),
+            archived: Some(false),
+            created_at: now_timestamp(),
+            metadata: None,
+        });
+        assert_eq!(inserted_prompt.as_ref().unwrap().id, "123");
+
+        let p = db.get_prompt("123", None).unwrap();
+        assert_eq!(p.as_ref().unwrap().id, "123");
+        assert_eq!(p.as_ref().unwrap().content, "Hello, world!");
+
+        // insert a new version of the prompt
+        let _ = db.insert_prompt(DbPrompt {
+            id: "1234".to_string(),
+            version: 2,
+            content: "updated content".to_string(),
+            parent: "123".to_string(),
+            branched: Some(false),
+            archived: Some(false),
+            created_at: now_timestamp(),
+            metadata: None,
+        });
+
+        let prompt = db.get_prompt_content_latest_version("123").unwrap();
+        assert_eq!(prompt, "updated content");
+
+        let check_updated_prompt_content = db.get_prompt_content("1234").unwrap();
+        assert_eq!(check_updated_prompt_content, "updated content");
+
+        let check_original_prompt_content = db.get_prompt_content("123").unwrap();
+        assert_eq!(check_original_prompt_content, "Hello, world!");
+    }
+
+    #[test]
+    fn test_get_prompts() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir
+            .path()
+            .join("test.db")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let db = PromptDb::new(&db_path).unwrap();
+
+        // Insert prompts with metadata
+        let _ = db.insert_prompt(DbPrompt {
+            id: "prompt1".to_string(),
+            version: 1,
+            content: "Content 1".to_string(),
+            parent: "prompt1".to_string(),
+            branched: Some(false),
+            archived: Some(false),
+            created_at: now_timestamp(),
+            metadata: Some(DbPromptMetadata {
+                id: "prompt1".to_string(),
+                name: Some("Test Prompt 1".to_string()),
+                description: Some("Description 1".to_string()),
+                category: Some("test".to_string()),
+                tags: Some(vec!["tag1".to_string()]),
+                updated_at: now_timestamp(),
+            }),
+        });
+
+        let _ = db.insert_prompt(DbPrompt {
+            id: "prompt2".to_string(),
+            version: 1,
+            content: "Content 2".to_string(),
+            parent: "prompt2".to_string(),
+            branched: Some(false),
+            archived: Some(false),
+            created_at: now_timestamp(),
+            metadata: Some(DbPromptMetadata {
+                id: "prompt2".to_string(),
+                name: Some("Test Prompt 2".to_string()),
+                description: Some("Description 2".to_string()),
+                category: Some("other".to_string()),
+                tags: Some(vec!["tag2".to_string()]),
+                updated_at: now_timestamp(),
+            }),
+        });
+
+        // Test get all prompts
+        let prompts = db.get_prompts(None, 0, 10).unwrap();
+        assert_eq!(prompts.len(), 2);
+
+        // Test get prompts by category
+        let test_prompts = db.get_prompts(Some("test".to_string()), 0, 10).unwrap();
+        assert_eq!(test_prompts.len(), 1);
+        assert_eq!(test_prompts[0].id, "prompt1");
+
+        // Test pagination
+        let limited_prompts = db.get_prompts(None, 0, 1).unwrap();
+        assert_eq!(limited_prompts.len(), 1);
+    }
+
+    #[test]
+    fn test_get_prompt_with_metadata() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir
+            .path()
+            .join("test.db")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let db = PromptDb::new(&db_path).unwrap();
+
+        let _ = db.insert_prompt(DbPrompt {
+            id: "test_id".to_string(),
+            version: 1,
+            content: "Test content".to_string(),
+            parent: "test_id".to_string(),
+            branched: Some(false),
+            archived: Some(false),
+            created_at: now_timestamp(),
+            metadata: Some(DbPromptMetadata {
+                id: "test_id".to_string(),
+                name: Some("Test Name".to_string()),
+                description: Some("Test Description".to_string()),
+                category: Some("test".to_string()),
+                tags: Some(vec!["tag1".to_string(), "tag2".to_string()]),
+                updated_at: now_timestamp(),
+            }),
+        });
+
+        // Test get prompt with metadata
+        let prompt_with_metadata = db.get_prompt("test_id", Some(true)).unwrap().unwrap();
+        assert_eq!(prompt_with_metadata.id, "test_id");
+        assert!(prompt_with_metadata.metadata.is_some());
+
+        let metadata = prompt_with_metadata.metadata.unwrap();
+        assert_eq!(metadata.name, Some("Test Name".to_string()));
+        assert_eq!(metadata.category, Some("test".to_string()));
+        assert_eq!(
+            metadata.tags,
+            Some(vec!["tag1".to_string(), "tag2".to_string()])
+        );
+
+        // Test get prompt without metadata
+        let prompt_without_metadata = db.get_prompt("test_id", Some(false)).unwrap().unwrap();
+        assert_eq!(prompt_without_metadata.id, "test_id");
+        assert!(prompt_without_metadata.metadata.is_none());
+    }
+
+    #[test]
+    fn test_update_prompt_metadata() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir
+            .path()
+            .join("test.db")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let db = PromptDb::new(&db_path).unwrap();
+
+        let _ = db.insert_prompt(DbPrompt {
+            id: "update_test".to_string(),
+            version: 1,
+            content: "Content".to_string(),
+            parent: "update_test".to_string(),
+            branched: Some(false),
+            archived: Some(false),
+            created_at: now_timestamp(),
+            metadata: Some(DbPromptMetadata {
+                id: "update_test".to_string(),
+                name: Some("Original Name".to_string()),
+                description: Some("Original Description".to_string()),
+                category: Some("original".to_string()),
+                tags: Some(vec!["original".to_string()]),
+                updated_at: now_timestamp(),
+            }),
+        });
+
+        // Update metadata
+        let updated_metadata = DbPromptMetadata {
+            id: "update_test".to_string(),
+            name: Some("Updated Name".to_string()),
+            description: Some("Updated Description".to_string()),
+            category: Some("updated".to_string()),
+            tags: Some(vec!["updated".to_string()]),
+            updated_at: now_timestamp(),
+        };
+
+        let result = db
+            .update_prompt_metadata("update_test", updated_metadata)
+            .unwrap();
+        assert_eq!(result, "update_test");
+
+        // Verify update
+        let prompt = db.get_prompt("update_test", Some(true)).unwrap().unwrap();
+        let metadata = prompt.metadata.unwrap();
+        assert_eq!(metadata.name, Some("Updated Name".to_string()));
+        assert_eq!(metadata.category, Some("updated".to_string()));
+
+        // Test updating non-existent prompt
+        let non_existent_metadata = DbPromptMetadata {
+            id: "non_existent".to_string(),
+            name: Some("Test".to_string()),
+            description: Some("Test".to_string()),
+            category: Some("test".to_string()),
+            tags: None,
+            updated_at: now_timestamp(),
+        };
+
+        let result = db.update_prompt_metadata("non_existent", non_existent_metadata);
+        assert!(matches!(result, Err(DatabaseError::NotFound)));
+    }
+
+    #[test]
+    fn test_delete_prompt() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir
+            .path()
+            .join("test.db")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let db = PromptDb::new(&db_path).unwrap();
+
+        let _ = db.insert_prompt(DbPrompt {
+            id: "delete_test".to_string(),
+            version: 1,
+            content: "Content to delete".to_string(),
+            parent: "delete_test".to_string(),
+            branched: Some(false),
+            archived: Some(false),
+            created_at: now_timestamp(),
+            metadata: None,
+        });
+
+        // Verify prompt exists before deletion
+        let prompt = db.get_prompt("delete_test", None).unwrap();
+        assert!(prompt.is_some());
+        assert_eq!(prompt.unwrap().archived, Some(false));
+
+        // Delete prompt
+        let result = db.delete_prompt("delete_test").unwrap();
+        assert!(result);
+
+        // Verify prompt is archived after deletion
+        let archived_prompt = db.get_prompt("delete_test", None).unwrap();
+        assert!(archived_prompt.is_some());
+        assert_eq!(archived_prompt.unwrap().archived, Some(true));
+
+        // Test deleting non-existent prompt
+        let result = db.delete_prompt("non_existent").unwrap();
+        assert!(!result);
     }
 }

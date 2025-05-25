@@ -14,32 +14,10 @@ servers:
   description: Local path
 paths:
   /prompt:
-    put:
-      tags:
-      - routes
-      summary: Update prompt
-      operationId: update_prompt
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdatePromptRequest'
-        required: true
-      responses:
-        '200':
-          description: Successly updated prompt
-          content:
-            text/plain:
-              schema:
-                type: string
-        '400':
-          description: Invalid request body
-        '404':
-          description: Prompt not found
     post:
       tags:
       - routes
-      summary: Create prompt
+      summary: Create prompt or update it by passing the parent id
       operationId: create_prompt
       requestBody:
         content:
@@ -329,24 +307,3 @@ components:
           items:
             type: string
           description: The tags of the prompt
-    UpdatePromptRequest:
-      type: object
-      required:
-      - id
-      - content
-      - parent
-      properties:
-        branched:
-          type:
-          - boolean
-          - 'null'
-          description: Whether the updated prompt is branched
-        content:
-          type: string
-          description: The content of the updated prompt
-        id:
-          type: string
-          description: The id of the prompt to update
-        parent:
-          type: string
-          description: The parent of the updated prompt. Most times its the same as the id of the prompt to update.

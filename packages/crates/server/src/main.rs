@@ -23,7 +23,6 @@ mod routes;
         routes::get_prompt_content,
         routes::get_prompts,
         routes::create_prompt,
-        routes::update_prompt,
         routes::update_prompt_metadata,
         routes::delete_prompt
     ),
@@ -87,10 +86,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let app = Router::new()
-        .route(
-            "/prompt",
-            post(routes::create_prompt).put(routes::update_prompt),
-        )
+        .route("/prompt", post(routes::create_prompt))
         .route(
             "/prompt/{id}",
             get(routes::get_prompt).delete(routes::delete_prompt),
