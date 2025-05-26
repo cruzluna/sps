@@ -2,11 +2,10 @@ use axum::{
     routing::{get, post, put},
     Router,
 };
-use cache::PromptDb;
-use log::info;
+use cache::CacheConfig;
+use log::{debug, info};
 use std::env;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
@@ -48,7 +47,7 @@ fn write_openapi_spec() -> std::io::Result<()> {
 
 #[derive(Clone)]
 struct AppState {
-    cache: Arc<Mutex<PromptDb>>,
+    cache: Arc<CacheConfig>,
 }
 
 #[tokio::main]
@@ -70,6 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: Object storage for long term storage
 
     let stage = env::var("STAGE").unwrap_or_else(|_| "dev".to_string());
+    debug!("Stage: {}", stage);
     let db_path = match stage.as_str() {
         "prod" => {
             let data_dir = env::var("DATA_DIR").expect("DATA_DIR must be set");
@@ -78,11 +78,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "dev" => "prompts-dev.db".to_string(),
         _ => panic!("Invalid stage: {}", stage),
     };
-    info!("Stage: {}", stage);
 
-    let cache = PromptDb::new(&db_path)?;
+    let cache = CacheConfig::new(&db_path)?;
     let state = AppState {
-        cache: Arc::new(Mutex::new(cache)),
+        cache: Arc::new(cache),
     };
 
     let app = Router::new()

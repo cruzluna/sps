@@ -2,7 +2,9 @@ use crate::api_models::CreatePromptRequest;
 
 #[cfg(not(test))]
 use log::{debug, error, info};
-use rusqlite::{params, Connection, Result, Statement};
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
+use rusqlite::{params, Result, Statement};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 #[cfg(test)]
@@ -10,31 +12,32 @@ use std::{println as info, println as error, println as debug};
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
-pub enum DatabaseError {
+pub enum CacheError {
     #[error("record not found")]
     NotFound,
+
     #[error("unhanded error:`{0}`")]
     UnhandledError(String),
+
     #[error("invalid request:`{0}`")]
     InvalidRequest(String),
+
+    #[error("error with pool")]
+    PoolError(#[from] r2d2::Error),
 }
 
-impl From<rusqlite::Error> for DatabaseError {
+type CacheResult<T> = Result<T, CacheError>;
+
+impl From<rusqlite::Error> for CacheError {
     fn from(err: rusqlite::Error) -> Self {
         match err {
             // Map specific rusqlite errors to more semantic DatabaseError variants
-            rusqlite::Error::QueryReturnedNoRows => DatabaseError::NotFound,
+            rusqlite::Error::QueryReturnedNoRows => CacheError::NotFound,
             // TBD
-            _ => DatabaseError::UnhandledError(err.to_string()),
+            _ => CacheError::UnhandledError(err.to_string()),
         }
     }
 }
-
-// impl Display for DatabaseError {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(f, "{:?}", self)
-//     }
-// }
 
 pub fn now_timestamp() -> i64 {
     SystemTime::now()
@@ -108,22 +111,39 @@ impl DbPromptMetadata {
     }
 }
 
-pub struct PromptDb {
-    conn: Connection,
+/*
+https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
+connections = ((core_count * 2) + effective_spindle_count)
+*/
+const MAX_CONNECTIONS: u32 = 4;
+pub struct CacheConfig {
+    pool: Pool<SqliteConnectionManager>,
 }
 
-impl PromptDb {
-    pub fn new(db_path: &str) -> Result<Self> {
+impl CacheConfig {
+    fn configure_pool(db_path: &str) -> Pool<SqliteConnectionManager> {
+        let manager = SqliteConnectionManager::file(db_path);
+        Pool::builder()
+            .max_size(MAX_CONNECTIONS)
+            .build(manager)
+            .unwrap_or_else(|e| {
+                error!("Failed to configure connection pool: {}", e);
+                panic!("Pool not configured");
+            })
+    }
+
+    pub fn new(db_path: &str) -> Result<Self, CacheError> {
         info!("Opening database: {}", db_path);
-        let conn = Connection::open(db_path)?;
+        let pool = CacheConfig::configure_pool(db_path);
 
         // Enable WAL mode for better concurrency and performance
-        conn.pragma_update(None, "journal_mode", "WAL")?;
+        pool.get()?.pragma_update(None, "journal_mode", "WAL")?;
         // Set busy timeout to handle concurrent access
-        conn.busy_timeout(std::time::Duration::from_secs(30))?;
+        pool.get()?
+            .busy_timeout(std::time::Duration::from_secs(30))?;
 
         // Create tables if they don't exist
-        conn.execute(
+        pool.get()?.execute(
             "CREATE TABLE IF NOT EXISTS prompts (
                 id TEXT PRIMARY KEY,
                 version INTEGER NOT NULL,
@@ -137,7 +157,7 @@ impl PromptDb {
         )?;
 
         // Metadata table
-        conn.execute(
+        pool.get()?.execute(
             "CREATE TABLE IF NOT EXISTS metadata (
                 id TEXT PRIMARY KEY,
                 name TEXT,
@@ -149,12 +169,12 @@ impl PromptDb {
             [],
         )?;
 
-        Ok(Self { conn })
+        Ok(Self { pool })
     }
 
-    pub fn insert_prompt(&self, prompt: DbPrompt) -> Result<DbPrompt> {
+    pub fn insert_prompt(&self, prompt: DbPrompt) -> CacheResult<DbPrompt> {
         info!("Inserting: {}", prompt.id);
-        self.conn.execute(
+        self.pool.get()?.execute(
             "INSERT INTO prompts (id, version, content, parent, branched, archived, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
@@ -170,7 +190,7 @@ impl PromptDb {
 
         if let Some(metadata) = &prompt.metadata {
             info!("Inserting metadata for prompt: {}", prompt.id);
-            self.conn.execute(
+            self.pool.get()?.execute(
                 "INSERT INTO metadata (id, name, description, category, tags, updated_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
@@ -187,9 +207,9 @@ impl PromptDb {
         Ok(prompt)
     }
 
-    pub fn get_prompt_content(&self, id: &str) -> Result<String, DatabaseError> {
-        let mut stmt = self
-            .conn
+    pub fn get_prompt_content(&self, id: &str) -> CacheResult<String> {
+        let pool_conn = self.pool.get()?;
+        let mut stmt = pool_conn
             .prepare("SELECT content FROM prompts WHERE id = ?1")
             .inspect_err(|e| {
                 error!(
@@ -211,9 +231,9 @@ impl PromptDb {
         Ok(content)
     }
 
-    pub fn get_prompt_content_latest_version(&self, id: &str) -> Result<String, DatabaseError> {
-        let mut stmt = self
-            .conn
+    pub fn get_prompt_content_latest_version(&self, id: &str) -> CacheResult<String> {
+        let pool_conn = self.pool.get()?;
+        let mut stmt = pool_conn
             .prepare("SELECT content FROM prompts WHERE parent = ?1 ORDER by version DESC limit 1")
             .inspect_err(|e| {
                 error!(
@@ -244,22 +264,23 @@ impl PromptDb {
         category: Option<String>,
         offset: u32,
         limit: u32,
-    ) -> Result<Vec<DbPrompt>, DatabaseError> {
+    ) -> CacheResult<Vec<DbPrompt>> {
         debug!(
             "Getting prompts with params: category={:?}, offset={}, limit={}",
             category, offset, limit
         );
         if limit <= 0 {
             error!("Invalid request: limit={}", limit);
-            return Err(DatabaseError::InvalidRequest(
+            return Err(CacheError::InvalidRequest(
                 "Invalid limit value".to_string(),
             ));
         }
 
+        let pool_conn = self.pool.get()?;
         let mut stmt: Statement;
+
         if category.is_none() {
-            stmt = self
-                .conn
+            stmt = pool_conn
                 .prepare(
                     "SELECT * FROM prompts p 
                      LEFT JOIN metadata m ON p.id = m.id 
@@ -290,12 +311,11 @@ impl PromptDb {
                     })
                 })?
                 .map(|res| res.map_err(Into::into))
-                .collect::<Result<Vec<DbPrompt>, DatabaseError>>()?;
+                .collect::<Result<Vec<DbPrompt>, CacheError>>()?;
 
             return Ok(prompts);
         }
-        stmt = self
-            .conn
+        stmt = pool_conn
             .prepare(
                 "SELECT * FROM prompts p 
                  LEFT JOIN metadata m ON p.id = m.id 
@@ -337,19 +357,15 @@ impl PromptDb {
         prompts
     }
 
-    pub fn get_prompt(
-        &self,
-        id: &str,
-        metadata: Option<bool>,
-    ) -> Result<Option<DbPrompt>, DatabaseError> {
+    pub fn get_prompt(&self, id: &str, metadata: Option<bool>) -> CacheResult<Option<DbPrompt>> {
         debug!(
             "Getting prompt with id: {} and metadata: {:?}",
             id, metadata
         );
+        let pool_conn = self.pool.get()?;
+
         if metadata.is_some_and(|m| m) {
-            let mut stmt = self
-            .conn
-            .prepare(
+            let mut stmt = pool_conn.prepare(
                 "SELECT p.id, p.version, p.content, p.parent, p.branched, p.archived, p.created_at,
                         m.name, m.description, m.category, m.tags, m.updated_at
                  FROM prompts p 
@@ -378,20 +394,19 @@ impl PromptDb {
                         updated_at: row.get(11)?,
                     }),
                 })
-            });
+            }); // TODO: use rusqlite optional to avoid norows error handling
 
             return match prompt_with_metadata {
                 Ok(prompt_with_metadata) => Ok(Some(prompt_with_metadata)),
                 Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
                 Err(e) => {
                     error!("Database error while getting prompt with metadata: {}", e);
-                    Err(DatabaseError::UnhandledError(e.to_string()))
+                    Err(CacheError::UnhandledError(e.to_string()))
                 }
             };
         }
 
-        let mut stmt = self
-            .conn
+        let mut stmt = pool_conn
             .prepare("SELECT * FROM prompts WHERE id = ?1")
             .inspect_err(|e| {
                 error!(
@@ -418,7 +433,7 @@ impl PromptDb {
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => {
                 error!("Database error while getting prompt: {}", e);
-                Err(DatabaseError::UnhandledError(e.to_string()))
+                Err(CacheError::UnhandledError(e.to_string()))
             }
         };
     }
@@ -427,10 +442,10 @@ impl PromptDb {
         &self,
         id: &str,
         metadata: DbPromptMetadata,
-    ) -> Result<String, DatabaseError> {
+    ) -> CacheResult<String> {
         let now = now_timestamp();
 
-        let rows_affected = self.conn.execute(
+        let rows_affected = self.pool.get()?.execute(
             "UPDATE metadata SET name = ?2, description = ?3, category = ?4, tags = ?5, updated_at = ?7
              WHERE id = ?1",
             params![&id, &metadata.name, &metadata.description, &metadata.category, &metadata.tags_to_string(), now, now],
@@ -438,14 +453,15 @@ impl PromptDb {
         .inspect_err(|e| error!("Failed to update prompt metadata: {:?}", e))?;
 
         match rows_affected {
-            0 => Err(DatabaseError::NotFound),
+            0 => Err(CacheError::NotFound),
             _ => Ok(id.to_string()),
         }
     }
 
-    pub fn delete_prompt(&self, id: &str) -> Result<bool, DatabaseError> {
+    pub fn delete_prompt(&self, id: &str) -> CacheResult<bool> {
         let rows_affected = self
-            .conn
+            .pool
+            .get()?
             .execute(
                 "UPDATE prompts SET archived = true WHERE id = ?1",
                 params![id],
@@ -469,7 +485,7 @@ mod tests {
             .unwrap()
             .to_string();
 
-        let db = PromptDb::new(&db_path).unwrap();
+        let db = CacheConfig::new(&db_path).unwrap();
         let inserted_prompt = db.insert_prompt(DbPrompt {
             id: "123".to_string(),
             version: 1,
@@ -494,7 +510,7 @@ mod tests {
             .unwrap()
             .to_string();
 
-        let db = PromptDb::new(&db_path).unwrap();
+        let db = CacheConfig::new(&db_path).unwrap();
         let inserted_prompt = db.insert_prompt(DbPrompt {
             id: "123".to_string(),
             version: 1,
@@ -543,7 +559,7 @@ mod tests {
             .unwrap()
             .to_string();
 
-        let db = PromptDb::new(&db_path).unwrap();
+        let db = CacheConfig::new(&db_path).unwrap();
 
         // Insert prompts with metadata
         let _ = db.insert_prompt(DbPrompt {
@@ -606,7 +622,7 @@ mod tests {
             .unwrap()
             .to_string();
 
-        let db = PromptDb::new(&db_path).unwrap();
+        let db = CacheConfig::new(&db_path).unwrap();
 
         let _ = db.insert_prompt(DbPrompt {
             id: "test_id".to_string(),
@@ -655,7 +671,7 @@ mod tests {
             .unwrap()
             .to_string();
 
-        let db = PromptDb::new(&db_path).unwrap();
+        let db = CacheConfig::new(&db_path).unwrap();
 
         let _ = db.insert_prompt(DbPrompt {
             id: "update_test".to_string(),
@@ -707,7 +723,7 @@ mod tests {
         };
 
         let result = db.update_prompt_metadata("non_existent", non_existent_metadata);
-        assert!(matches!(result, Err(DatabaseError::NotFound)));
+        assert!(matches!(result, Err(CacheError::NotFound)));
     }
 
     #[test]
@@ -720,7 +736,7 @@ mod tests {
             .unwrap()
             .to_string();
 
-        let db = PromptDb::new(&db_path).unwrap();
+        let db = CacheConfig::new(&db_path).unwrap();
 
         let _ = db.insert_prompt(DbPrompt {
             id: "delete_test".to_string(),

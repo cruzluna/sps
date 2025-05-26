@@ -9,7 +9,7 @@ use axum::{
 };
 use log::{debug, error, info};
 
-use crate::{cache::DatabaseError, AppState};
+use crate::{cache::CacheError, AppState};
 
 /// Get entire prompt with option to include metadata
 #[utoipa::path(
@@ -33,8 +33,8 @@ pub async fn get_prompt(
 ) -> Result<Json<Prompt>, GetPromptError> {
     info!("Requested prompt with id: {}", id);
 
-    let cache = state.cache.lock().await;
-    let db_prompt = cache
+    let db_prompt = state
+        .cache
         .get_prompt(&id, params.metadata)
         .map_err(|e| {
             error!("Failed to get prompt for id {}: {:?}", id, e);
@@ -69,15 +69,14 @@ pub async fn get_prompt_content(
 ) -> Result<Json<String>, GetPromptError> {
     info!("Requested prompt with id: {}", id);
 
-    let cache = state.cache.lock().await;
     let content = match params.latest {
-        Some(true) => cache.get_prompt_content_latest_version(&id),
-        _ => cache.get_prompt_content(&id),
+        Some(true) => state.cache.get_prompt_content_latest_version(&id),
+        _ => state.cache.get_prompt_content(&id),
     }
     .map_err(|e| {
         error!("Failed to get prompt content for id {}: {:?}", id, e);
         match e {
-            DatabaseError::NotFound => GetPromptError::NotFound,
+            CacheError::NotFound => GetPromptError::NotFound,
             _ => GetPromptError::InternalServerError,
         }
     })?;
@@ -105,8 +104,8 @@ pub async fn get_prompts(
     Query(params): Query<GetPromptsRequest>,
 ) -> Result<Json<Vec<Prompt>>, GetPromptsError> {
     info!("Requested prompts with params: {:?}", params);
-    let cache = state.cache.lock().await;
-    let prompts = cache
+    let prompts = state
+        .cache
         .get_prompts(
             params.category,
             params.offset.unwrap_or(0) as u32,
@@ -115,7 +114,7 @@ pub async fn get_prompts(
         .map_err(|e| {
             error!("Failed to get prompts: {:?}", e);
             match e {
-                DatabaseError::InvalidRequest(_) => GetPromptsError::InvalidRequest,
+                CacheError::InvalidRequest(_) => GetPromptsError::InvalidRequest,
                 _ => GetPromptsError::InternalServerError,
             }
         })?;
@@ -140,8 +139,8 @@ pub async fn create_prompt(
     State(state): State<AppState>,
     Json(prompt): Json<CreatePromptRequest>,
 ) -> Result<String, CreatePromptError> {
-    let cache = state.cache.lock().await;
-    cache
+    state
+        .cache
         .insert_prompt(prompt.into())
         .map_err(|e| {
             debug!("Database error: {:?}", e);
@@ -168,13 +167,13 @@ pub async fn update_prompt_metadata(
 ) -> Result<String, UpdateMetadataError> {
     let id = prompt.id.clone();
     info!("Updating metadata for prompt: {:?}", id);
-    let cache = state.cache.lock().await;
-    cache
+    state
+        .cache
         .update_prompt_metadata(&id, prompt.into())
         .map_err(|e| {
             error!("Database error: {:?}", e);
             match e {
-                DatabaseError::NotFound => UpdateMetadataError::NotFound,
+                CacheError::NotFound => UpdateMetadataError::NotFound,
                 _ => UpdateMetadataError::InternalServerError,
             }
         })?;
@@ -197,8 +196,8 @@ pub async fn delete_prompt(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<(), DeletePromptError> {
-    let cache = state.cache.lock().await;
-    cache
+    state
+        .cache
         .delete_prompt(&id)
         .map_err(|_| DeletePromptError::InternalServerError)?
         .then_some(())
