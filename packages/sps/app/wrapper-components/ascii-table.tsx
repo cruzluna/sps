@@ -1,13 +1,4 @@
 import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
-import {
   AsciiCard,
   AsciiCardHeader,
   AsciiCardTitle,
@@ -15,86 +6,72 @@ import {
   AsciiCardContent,
   AsciiCardFooter,
 } from "~/components/ui/ascii-card";
+import type {
+  Prompt,
+  PromptListResponse,
+} from "system-prompt-storage/resources/prompts";
 
-export default function AsciiTable() {
+interface AsciiTableProps {
+  prompts?: PromptListResponse;
+}
+
+export default function AsciiTable({ prompts }: AsciiTableProps) {
+  if (!prompts || prompts.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <p className="font-tech text-gray-600 dark:text-gray-300">
+          No prompts found
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <Table>
-      <TableBody>
-        <TableRow>
-          <TableCell className="max-w-[320px] max-h-[320px] overflow-scroll">
-            <AsciiCard>
+    <div className="w-full overflow-x-auto">
+      <div
+        className="grid gap-4 p-2 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-fr"
+        style={{
+          contain: "layout style",
+          willChange: "auto",
+        }}
+      >
+        {prompts.map((prompt: Prompt) => (
+          <div
+            key={prompt.id}
+            className="min-w-[300px]"
+            style={{ contain: "layout" }}
+          >
+            <AsciiCard className="h-full !transition-none hover:!transition-none">
               <AsciiCardHeader>
-                <AsciiCardTitle>Prompt Name</AsciiCardTitle>
-                <AsciiCardDescription>Prompt Description</AsciiCardDescription>
-              </AsciiCardHeader>
-              <AsciiCardContent>
-                <p>
-                  Prompt Content Lorem Ipsum is simply dummy text of the Prompt
-                  Content Lorem Ipsum is simply dummy text of the Prompt Content
-                  Lorem Ipsum is simply dummy text of the Prompt Content Lorem
-                  Ipsum is simply dummy text of the Prompt Content Lorem Ipsum
-                  is simply dummy text of the Prompt Content Lorem Ipsum is
-                  simply dummy text of the Prompt Content Lorem Ipsum is simply
-                  dummy text of the Prompt Content Lorem Ipsum is simply dummy
-                  text of the Prompt Content Lorem Ipsum is simply dummy text of
-                  the Prompt Content Lorem Ipsum is simply dummy text of the
-                </p>
-              </AsciiCardContent>
-              <AsciiCardFooter>
-                <p>Created at</p>
-              </AsciiCardFooter>
-            </AsciiCard>
-          </TableCell>
-          <TableCell>
-            <AsciiCard>
-              <AsciiCardHeader>
-                <AsciiCardTitle>Prompt Version</AsciiCardTitle>
-                <AsciiCardDescription>
-                  Prompt Version Description
+                <AsciiCardTitle className="truncate">
+                  {prompt.metadata?.name}
+                </AsciiCardTitle>
+                <AsciiCardDescription className="truncate">
+                  {prompt.metadata?.description}
                 </AsciiCardDescription>
               </AsciiCardHeader>
               <AsciiCardContent>
-                <p>Prompt Version Content</p>
+                <div
+                  className="max-h-[200px] overflow-y-auto font-mono text-sm whitespace-pre-wrap pr-2
+                  scrollbar-thin scrollbar-track-gray-100 dark:scrollbar-track-gray-800
+                  scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600
+                  hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500"
+                >
+                  {prompt.content}
+                </div>
               </AsciiCardContent>
-              <AsciiCardFooter>
-                <p>Updated at</p>
+              <AsciiCardFooter className="text-xs !transition-none">
+                <div className="flex justify-between w-full">
+                  <span>v{prompt.version}</span>
+                  <span>
+                    {new Date(prompt.created_at * 1000).toLocaleDateString()}
+                  </span>
+                </div>
               </AsciiCardFooter>
             </AsciiCard>
-          </TableCell>
-          <TableCell>
-            <AsciiCard>
-              <AsciiCardHeader>
-                <AsciiCardTitle>Prompt Tags</AsciiCardTitle>
-                <AsciiCardDescription>
-                  Prompt Tags Description
-                </AsciiCardDescription>
-              </AsciiCardHeader>
-              <AsciiCardContent>
-                <p>Prompt Tags Content</p>
-              </AsciiCardContent>
-              <AsciiCardFooter>
-                <p>Updated at</p>
-              </AsciiCardFooter>
-            </AsciiCard>
-          </TableCell>
-          <TableCell>
-            <AsciiCard>
-              <AsciiCardHeader>
-                <AsciiCardTitle>Prompt Type</AsciiCardTitle>
-                <AsciiCardDescription>
-                  Prompt Type Description
-                </AsciiCardDescription>
-              </AsciiCardHeader>
-              <AsciiCardContent>
-                <p className="text-right">Prompt Type Content</p>
-              </AsciiCardContent>
-              <AsciiCardFooter>
-                <p>Updated at</p>
-              </AsciiCardFooter>
-            </AsciiCard>
-          </TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

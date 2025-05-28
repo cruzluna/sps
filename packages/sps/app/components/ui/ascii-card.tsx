@@ -6,11 +6,14 @@ interface AsciiCardProps extends React.ComponentProps<"div"> {
 }
 
 // Utility function to calculate border width based on container width
-function useBorderWidth(ref: React.RefObject<HTMLDivElement | null>) {
+function useBorderWidth(
+  ref: React.RefObject<HTMLDivElement | null>,
+  enabled: boolean = true
+) {
   const [borderWidth, setBorderWidth] = React.useState(30);
 
   React.useEffect(() => {
-    if (!ref.current) return;
+    if (!ref.current || !enabled) return;
 
     const updateWidth = () => {
       const containerWidth = ref.current?.clientWidth ?? 0;
@@ -23,7 +26,7 @@ function useBorderWidth(ref: React.RefObject<HTMLDivElement | null>) {
     updateWidth();
     window.addEventListener("resize", updateWidth);
     return () => window.removeEventListener("resize", updateWidth);
-  }, [ref]);
+  }, [ref, enabled]);
 
   return borderWidth;
 }
@@ -48,10 +51,13 @@ function AsciiCard({ className, id = "A001", ...props }: AsciiCardProps) {
 function AsciiCardHeader({
   className,
   id,
+  tags,
   ...props
-}: React.ComponentProps<"div"> & { id?: string }) {
+}: React.ComponentProps<"div"> & {
+  tags?: string[];
+}) {
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const borderWidth = useBorderWidth(containerRef);
+  const borderWidth = useBorderWidth(containerRef, !!tags);
 
   // Calculate max text length based on container width
   const maxTextLength = Math.max(borderWidth - 10, 10); // subtract padding and brackets
@@ -70,9 +76,11 @@ function AsciiCardHeader({
       data-slot="ascii-card-header"
       className={cn("border-b border-black/50 pb-2", className)}
     >
-      <pre className="mb-2 whitespace-pre overflow-hidden">
-        +--[ {formatText(id?.toString() || "react, typescript, nextjs")} ]--+
-      </pre>
+      {tags && (
+        <pre className="mb-2 whitespace-pre overflow-hidden">
+          +--[ {formatText(tags.join(", "))} ]--+
+        </pre>
+      )}
       {props.children}
     </div>
   );
