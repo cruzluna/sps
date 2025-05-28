@@ -11,6 +11,6 @@
   },
   "dependencies": {
     "linkedom": "^0.18.10",
-    "system-prompt-storage": "0.1.0-alpha.6"
+    "system-prompt-storage": "0.1.0-alpha.8"
   }
 }

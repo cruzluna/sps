@@ -4,6 +4,7 @@ import { SystemPromptStorage } from "system-prompt-storage";
 console.log("Hello via Bun!");
 const client = new SystemPromptStorage({
     apiKey: "empty",
+    baseURL: "http://localhost:8080"
     // apiKey: process.env.SYSTEM_PROMPT_STORAGE_API_KEY,
 });
 
@@ -21,13 +22,18 @@ const sections = [
         const {document} = parseHTML(html);
         const rules = Array.from(document.querySelectorAll('code.text-sm.block.pr-3'))
                 .map((code) => (code as HTMLElement).textContent || "");
-        console.log(rules);
+        // console.log(rules);
         for(const rule of rules) {
-            const prompt = await client.prompts.create({
-                content: rule,
-                name: section,
-                tags: [section],
-            });
+            try {
+                await client.prompts.create({
+                    content: rule,
+                    name: section,
+                    tags: [section],
+                    category: section,
+                });
+            } catch (error) {
+                console.error(`Failed to create prompt for ${section}:`, error);
+            }
         }
     } catch (error) {
         console.error(`Failed to fetch rules for ${section}:`, error);
