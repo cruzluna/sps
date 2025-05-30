@@ -93,6 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/prompt/{id}/content", get(routes::get_prompt_content))
         .route("/prompt/metadata", put(routes::update_prompt_metadata))
         .route("/prompts", get(routes::get_prompts))
+        .route("/prompt/categories", get(routes::get_prompt_categories))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(TraceLayer::new_for_http())
         .with_state(state);

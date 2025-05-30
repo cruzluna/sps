@@ -84,6 +84,17 @@ pub async fn get_prompt_content(
     Ok(Json(content))
 }
 
+#[axum_macros::debug_handler]
+pub async fn get_prompt_categories(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<String>>, GetPromptError> {
+    let categories = state.cache.get_prompt_categories().map_err(|e| {
+        error!("Failed to get prompt categories: {:?}", e);
+        GetPromptError::InternalServerError
+    })?;
+    Ok(Json(categories))
+}
+
 /// Get list of prompts with pagination
 #[utoipa::path(
     get,

@@ -199,22 +199,6 @@ impl IntoResponse for CreatePromptError {
     }
 }
 
-pub enum UpdatePromptError {
-    NotFound,
-    InternalServerError,
-}
-
-impl IntoResponse for UpdatePromptError {
-    fn into_response(self) -> Response<Body> {
-        let status = match self {
-            Self::NotFound => StatusCode::NOT_FOUND,
-            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-
-        status.into_response()
-    }
-}
-
 pub enum UpdateMetadataError {
     NotFound,
     InternalServerError,

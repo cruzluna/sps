@@ -27,6 +27,15 @@ pub enum CacheError {
 }
 
 type CacheResult<T> = Result<T, CacheError>;
+// FromIterator<Result<_, rusqlite::Error>>` is not implemented for `Result<Vec<std::string::String>, cache::CacheError>`
+// impl FromIterator<Result<Collection<Val>, rusqlite::Error>> for Result<Val, CacheError>{
+//     fn from_iter<T: IntoIterator<Item = Result<Val, rusqlite::Error>>>(iter: T) -> Self {
+//         let mut c =
+//         for i in iter{
+
+//         }
+//     }
+// }
 
 impl From<rusqlite::Error> for CacheError {
     fn from(err: rusqlite::Error) -> Self {
@@ -229,6 +238,23 @@ impl CacheConfig {
                 }
             })?;
         Ok(content)
+    }
+
+    pub fn get_prompt_categories(&self) -> CacheResult<Vec<String>> {
+        let pool_conn = self.pool.get()?;
+        let mut stmt = pool_conn
+            .prepare("SELECT DISTINCT category FROM metadata")
+            .inspect_err(|e| {
+                error!(
+                    "Failed to prepare statement for get_prompt_categories: {}",
+                    e
+                )
+            })?;
+        let categories: Vec<String> = stmt
+            .query_map([], |row| row.get(0))?
+            .map(|res| res.map_err(Into::into))
+            .collect::<Result<Vec<String>, CacheError>>()?;
+        Ok(categories)
     }
 
     pub fn get_prompt_content_latest_version(&self, id: &str) -> CacheResult<String> {
@@ -766,5 +792,39 @@ mod tests {
         // Test deleting non-existent prompt
         let result = db.delete_prompt("non_existent").unwrap();
         assert!(!result);
+    }
+
+    #[test]
+    fn test_get_prompt_categories() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir
+            .path()
+            .join("test.db")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let db = CacheConfig::new(&db_path).unwrap();
+
+        let _ = db.insert_prompt(DbPrompt {
+            id: "test_id".to_string(),
+            version: 1,
+            content: "Test content".to_string(),
+            parent: "test_id".to_string(),
+            branched: Some(false),
+            archived: Some(false),
+            created_at: now_timestamp(),
+            metadata: Some(DbPromptMetadata {
+                id: "test_id".to_string(),
+                name: Some("Test Name".to_string()),
+                description: Some("Test Description".to_string()),
+                category: Some("test".to_string()),
+                tags: Some(vec!["tag1".to_string(), "tag2".to_string()]),
+                updated_at: now_timestamp(),
+            }),
+        });
+
+        let categories = db.get_prompt_categories().unwrap();
+        assert_eq!(categories, vec!["test"]);
     }
 }
