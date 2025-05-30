@@ -251,9 +251,11 @@ impl CacheConfig {
                 )
             })?;
         let categories: Vec<String> = stmt
-            .query_map([], |row| row.get(0))?
+            .query_map([], |row| row.get(0))
+            .inspect_err(|e| error!("Failed to query map for get_prompt_categories: {}", e))?
             .map(|res| res.map_err(Into::into))
-            .collect::<Result<Vec<String>, CacheError>>()?;
+            .collect::<Result<Vec<String>, CacheError>>()
+            .inspect_err(|e| error!("Failed to collect for get_prompt_categories: {}", e))?;
         Ok(categories)
     }
 
