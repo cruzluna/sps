@@ -5,9 +5,18 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const offset = parseInt(url.searchParams.get("offset") || "0");
   const limit = parseInt(url.searchParams.get("limit") || "20");
-  //   const category = url.searchParams.get("category") || "react";
+  const category = url.searchParams.get("category");
 
-  const prompts = await getPrompts({ offset, limit });
+  const params: { offset: number; limit: number; category?: string } = {
+    offset,
+    limit,
+  };
+
+  if (category) {
+    params.category = category;
+  }
+
+  const prompts = await getPrompts(params);
   return new Response(JSON.stringify(prompts), {
     headers: {
       "Content-Type": "application/json",

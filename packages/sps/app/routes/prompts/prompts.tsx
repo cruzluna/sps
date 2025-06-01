@@ -7,16 +7,24 @@ import { useFetcher } from "react-router";
 const ITEMS_PER_PAGE = 12;
 
 export async function loader({}: Route.LoaderArgs) {
-  const { getPrompts } = await import("~/.server/system-prompt");
-  const prompts = await getPrompts({
-    limit: ITEMS_PER_PAGE,
-    offset: 0,
-  });
-  return { prompts };
+  const { getPrompts, getPromptCategories } = await import(
+    "~/.server/system-prompt"
+  );
+
+  const [prompts, categories] = await Promise.all([
+    getPrompts({
+      limit: ITEMS_PER_PAGE,
+      offset: 0,
+    }),
+    getPromptCategories(),
+  ]);
+
+  return { prompts, categories };
 }
 
 export default function Prompts({ loaderData }: Route.ComponentProps) {
   const [prompts, setPrompts] = useState<Prompt[]>(loaderData.prompts);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const fetcher = useFetcher<Prompt[]>();
   const [hasMore, setHasMore] = useState(true);
   const observerTarget = useRef<HTMLDivElement>(null);
@@ -32,9 +40,33 @@ export default function Prompts({ loaderData }: Route.ComponentProps) {
   }, [fetcher.data]);
 
   function loadMore() {
-    fetcher.load(
-      `/api/prompts?offset=${prompts.length}&limit=${ITEMS_PER_PAGE}`
-    );
+    const params = new URLSearchParams({
+      offset: prompts.length.toString(),
+      limit: ITEMS_PER_PAGE.toString(),
+    });
+
+    if (selectedCategory) {
+      params.set("category", selectedCategory);
+    }
+
+    fetcher.load(`/api/prompts?${params.toString()}`);
+  }
+
+  function handleCategoryChange(category: string | null) {
+    setSelectedCategory(category);
+    setPrompts([]);
+    setHasMore(true);
+
+    const params = new URLSearchParams({
+      offset: "0",
+      limit: ITEMS_PER_PAGE.toString(),
+    });
+
+    if (category) {
+      params.set("category", category);
+    }
+
+    fetcher.load(`/api/prompts?${params.toString()}`);
   }
 
   useEffect(() => {
@@ -58,6 +90,33 @@ export default function Prompts({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="space-y-4 contain-layout">
+      {/* Category Filter */}
+      <div className="sticky top-0 bg-white dark:bg-gray-950 py-2 z-10 flex flex-wrap gap-2 items-center font-tech">
+        <button
+          onClick={() => handleCategoryChange(null)}
+          className={`px-3 py-1 text-sm transition-colors ${
+            selectedCategory === null
+              ? "font-bold"
+              : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          }`}
+        >
+          All
+        </button>
+        {loaderData.categories.map((category) => (
+          <button
+            key={category}
+            onClick={() => handleCategoryChange(category)}
+            className={`px-3 py-1 text-sm transition-colors ${
+              selectedCategory === category
+                ? "font-bold"
+                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            }`}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+
       <div className="transform-gpu will-change-auto">
         <AsciiTable prompts={prompts} />
       </div>
