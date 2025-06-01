@@ -69,6 +69,10 @@ export default function Prompts({ loaderData }: Route.ComponentProps) {
     fetcher.load(`/api/prompts?${params.toString()}`);
   }
 
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -91,30 +95,39 @@ export default function Prompts({ loaderData }: Route.ComponentProps) {
   return (
     <div className="space-y-4 contain-layout">
       {/* Category Filter */}
-      <div className="sticky top-0 bg-white dark:bg-gray-950 py-2 z-10 flex flex-wrap gap-2 items-center font-tech">
-        <button
-          onClick={() => handleCategoryChange(null)}
-          className={`px-3 py-1 text-sm transition-colors ${
-            selectedCategory === null
-              ? "font-bold"
-              : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-          }`}
-        >
-          All
-        </button>
-        {loaderData.categories.map((category) => (
+      <div className="sticky top-0 bg-white dark:bg-gray-950 py-2 z-10 flex flex-wrap gap-2 items-center justify-between font-tech">
+        <div className="flex flex-wrap gap-2 items-center">
           <button
-            key={category}
-            onClick={() => handleCategoryChange(category)}
+            onClick={() => handleCategoryChange(null)}
             className={`px-3 py-1 text-sm transition-colors ${
-              selectedCategory === category
+              selectedCategory === null
                 ? "font-bold"
                 : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             }`}
           >
-            {category}
+            All
           </button>
-        ))}
+          {loaderData.categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => handleCategoryChange(category)}
+              className={`px-3 py-1 text-sm transition-colors ${
+                selectedCategory === category
+                  ? "font-bold"
+                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={scrollToTop}
+          className="px-3 py-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          scroll to top^
+        </button>
       </div>
 
       <div className="transform-gpu will-change-auto">
