@@ -140,7 +140,7 @@ function AsciiCardFooter({ className, ...props }: React.ComponentProps<"div">) {
         className
       )}
     >
-      &lt;ACCESS&gt;
+      &lt;created&gt;
       {props.children}
     </div>
   );

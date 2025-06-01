@@ -10,12 +10,23 @@ import type {
   Prompt,
   PromptListResponse,
 } from "system-prompt-storage/resources/prompts";
+import { toast } from "sonner";
 
 interface AsciiTableProps {
   prompts?: PromptListResponse;
 }
 
 export default function AsciiTable({ prompts }: AsciiTableProps) {
+  const copyToClipboard = async (text: string, type: "id" | "prompt") => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(`copied ${type}`);
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+      toast.error("Failed to copy");
+    }
+  };
+
   if (!prompts || prompts.length === 0) {
     return (
       <div className="text-center p-8">
@@ -61,11 +72,30 @@ export default function AsciiTable({ prompts }: AsciiTableProps) {
                 </div>
               </AsciiCardContent>
               <AsciiCardFooter className="text-xs !transition-none">
-                <div className="flex justify-between w-full">
-                  <span>v{prompt.version}</span>
-                  <span>
-                    {new Date(prompt.created_at * 1000).toLocaleDateString()}
-                  </span>
+                <div className="flex justify-between items-center w-full">
+                  <div className="flex gap-1 font-tech">
+                    <button
+                      onClick={() => copyToClipboard(prompt.id, "id")}
+                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                      title="Copy ID"
+                    >
+                      cmd+c id
+                    </button>
+                    <span className="text-gray-300 dark:text-gray-600">|</span>
+                    <button
+                      onClick={() => copyToClipboard(prompt.content, "prompt")}
+                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                      title="Copy prompt content"
+                    >
+                      cmd+c prompt
+                    </button>
+                  </div>
+                  <div className="flex gap-1">
+                    <span>v{prompt.version}</span>
+                    <span>
+                      {new Date(prompt.created_at * 1000).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
               </AsciiCardFooter>
             </AsciiCard>
