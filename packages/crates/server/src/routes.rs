@@ -20,7 +20,7 @@ use crate::{cache::CacheError, AppState};
         ("metadata" = Option<bool>, Query, description = "Whether to include metadata in the response")
     ),
     responses(
-        (status = StatusCode::OK, description = "Successly retrieved prompt", body = String),
+        (status = StatusCode::OK, description = "Successly retrieved prompt", body = Prompt),
         (status = StatusCode::NOT_FOUND, description = "Prompt not found"),
         (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Internal server error")
     )

@@ -80,9 +80,9 @@ paths:
         '200':
           description: Successly retrieved prompt
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/Prompt'
         '404':
           description: Prompt not found
         '500':
