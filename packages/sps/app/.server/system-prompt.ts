@@ -1,5 +1,5 @@
 import { SystemPromptStorage } from "system-prompt-storage";
-import type { Prompt, PromptListParams, PromptListResponse } from "system-prompt-storage/resources/prompts";
+import type { Prompt, PromptListParams, PromptListResponse, PromptRetrieveContentParams, PromptRetrieveParams } from "system-prompt-storage/resources/prompts";
 
 const client = new SystemPromptStorage({
     apiKey:"empty"
@@ -19,5 +19,10 @@ export async function getPrompts(params: PromptListParams): Promise<Prompt[]> {
 export async function getPromptCategories(): Promise<string[]> {
     const categories = await client.get('/prompt/categories');
     return categories as string[];
+}
+
+export async function getPrompt(id: string, params: PromptRetrieveParams = { metadata: true }): Promise<Prompt> {
+    const prompt = await client.prompts.retrieve(id, params);
+    return prompt;
 }
 

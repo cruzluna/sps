@@ -23,18 +23,6 @@ export default function Home() {
             Make storing prompts simple and never hardcode it in code again
           </p>
         </header>
-        <div className="mt-12 w-full max-w-2xl overflow-auto">
-          <h2 className="text-xl font-medium font-tech mb-4 text-center">
-            Development Plan
-          </h2>
-          <iframe
-            src="https://link.excalidraw.com/readonly/gm4QcTLKdalUvtqURely?darkMode=truehttps://link.excalidraw.com/readonly/gm4QcTLKdalUvtqURely"
-            width="100%"
-            height="100%"
-            className="rounded-lg h-96"
-          />
-        </div>
-
         <div className="mt-12 w-full max-w-2xl">
           <h2 className="text-xl font-medium font-tech mb-4 text-center">
             Project Vision
