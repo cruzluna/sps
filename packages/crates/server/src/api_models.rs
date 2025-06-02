@@ -82,8 +82,7 @@ impl From<DbPrompt> for Prompt {
             branched: db_prompt.branched,
             archived: db_prompt.archived,
             created_at: db_prompt.created_at,
-            //TODO: include metadata
-            metadata: None,
+            metadata: db_prompt.metadata.map(PromptMetadata::from),
         }
     }
 }
