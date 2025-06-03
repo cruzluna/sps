@@ -27,15 +27,6 @@ pub enum CacheError {
 }
 
 type CacheResult<T> = Result<T, CacheError>;
-// FromIterator<Result<_, rusqlite::Error>>` is not implemented for `Result<Vec<std::string::String>, cache::CacheError>`
-// impl FromIterator<Result<Collection<Val>, rusqlite::Error>> for Result<Val, CacheError>{
-//     fn from_iter<T: IntoIterator<Item = Result<Val, rusqlite::Error>>>(iter: T) -> Self {
-//         let mut c =
-//         for i in iter{
-
-//         }
-//     }
-// }
 
 impl From<rusqlite::Error> for CacheError {
     fn from(err: rusqlite::Error) -> Self {
