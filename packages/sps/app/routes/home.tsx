@@ -2,7 +2,7 @@ import type { Route } from "./+types/home";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "System Prompt Storage" },
+    { title: "Simple Prompt Storage" },
     {
       name: "description",
       content:
@@ -29,7 +29,7 @@ export default function Home() {
           </h2>
           <div className="p-6 rounded-lg border border-gray-200 dark:border-gray-700">
             <p className="font-tech text-gray-700 dark:text-gray-200 leading-relaxed">
-              System Prompt Storage is designed to be the canonical method of
+              Simple Prompt Storage is designed to be the canonical method of
               storing and retrieving prompts. Store, version, and manage prompts
               from an API rather than having to hardcode them in code.
             </p>
