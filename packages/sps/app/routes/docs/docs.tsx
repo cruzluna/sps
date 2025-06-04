@@ -12,13 +12,39 @@ const navigation: NavItem[] = [
     path: "/docs/getting-started",
   },
   {
-    name: "Guides",
-    path: "/docs/guides",
+    name: "API",
+    path: "/docs/api",
     children: [
-      { name: "Guide 1", path: "/docs/guides/guide-1" },
-      // { name: "Guide 2", path: "/docs/guides/guide-2" }, // Future guide
+      { name: "Create", path: "/docs/api/create" },
+      { name: "Read", path: "/docs/api/read" },
+      { name: "Update", path: "/docs/api/update" },
+      { name: "Delete", path: "/docs/api/delete" },
     ],
   },
+  {
+    name: "Data Model",
+    path: "/docs/data-model",
+  },
+  {
+    name: "Pricing",
+    path: "/docs/pricing",
+  },
+  {
+    name: "Upcoming Features",
+    path: "/docs/upcoming-features",
+  },
+  {
+    name: "OpenAPI Specification",
+    path: "/docs/openapi-spec",
+  },
+  // {
+  //   name: "Guides",
+  //   path: "/docs/guides",
+  //   children: [
+  //     { name: "Guide 1", path: "/docs/guides/guide-1" },
+  //     // { name: "Guide 2", path: "/docs/guides/guide-2" }, // Future guide
+  //   ],
+  // },
 ];
 
 export default function Docs() {
