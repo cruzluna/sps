@@ -11,6 +11,8 @@ import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuList,
+  NavigationMenuTrigger,
+  NavigationMenuContent,
 } from "~/components/ui/navigation-menu";
 
 import type { Route } from "./+types/root";
@@ -35,14 +37,47 @@ export const links: Route.LinksFunction = () => [
 function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const docsNavigation = [
+    {
+      name: "Getting Started",
+      path: "/docs/getting-started",
+    },
+    {
+      name: "API",
+      path: "/docs/api",
+      children: [
+        { name: "Create", path: "/docs/api/create" },
+        { name: "Read", path: "/docs/api/read" },
+        { name: "Update", path: "/docs/api/update" },
+        { name: "Delete", path: "/docs/api/delete" },
+      ],
+    },
+    {
+      name: "Data Model",
+      path: "/docs/data-model",
+    },
+    {
+      name: "Pricing",
+      path: "/docs/pricing",
+    },
+    {
+      name: "Upcoming Features",
+      path: "/docs/upcoming-features",
+    },
+    {
+      name: "OpenAPI Specification",
+      path: "/docs/openapi-spec",
+    },
+  ];
+
   return (
     <div className="fixed top-0 left-0 right-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black z-50">
       <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-        <Link
-          to="/"
-          className="text-xl font-['system-ui'] font-medium min-w-[300px] whitespace-nowrap"
-        >
-          +--[ simple prompt storage ]--+
+        <Link to="/" className="text-xl font-tech font-medium flex-shrink-0">
+          <span className="hidden md:inline">
+            +--[ simple prompt storage ]--+
+          </span>
+          <span className="md:hidden">+-[sps]-+</span>
         </Link>
 
         {/* Desktop Navigation - visible from lg screens and up */}
@@ -51,7 +86,7 @@ function Navigation() {
             <NavigationMenuItem>
               <Link
                 to="/prompts"
-                className="text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-2"
+                className="font-tech text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-2"
               >
                 Prompts
               </Link>
@@ -59,7 +94,7 @@ function Navigation() {
             <NavigationMenuItem>
               <Link
                 to="/docs"
-                className="text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-2"
+                className="font-tech text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-2"
               >
                 Docs
               </Link>
@@ -70,7 +105,7 @@ function Navigation() {
         {/* Mobile Menu Button - visible up to lg screens */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="lg:hidden flex flex-col justify-center items-center w-8 h-8 space-y-1.5"
+          className="lg:hidden flex flex-col justify-center items-center w-8 h-8 space-y-1.5 flex-shrink-0 ml-4"
           aria-label="Toggle mobile menu"
         >
           <div
@@ -93,27 +128,56 @@ function Navigation() {
 
       {/* Mobile Menu Dropdown - visible up to lg screens */}
       <div
-        className={`lg:hidden bg-white dark:bg-black border-t border-gray-200 dark:border-gray-700 transition-all duration-300 ${
+        className={`lg:hidden bg-white dark:bg-black border-t border-gray-200 dark:border-gray-700 transition-all duration-300 overflow-y-auto ${
           isMobileMenuOpen
-            ? "max-h-48 opacity-100"
+            ? "max-h-96 opacity-100"
             : "max-h-0 opacity-0 overflow-hidden"
         }`}
       >
         <div className="container mx-auto px-4 py-2 space-y-1">
           <Link
             to="/prompts"
-            className="block text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-3 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+            className="block font-tech text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Prompts
           </Link>
-          <Link
-            to="/docs"
-            className="block text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-3 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Docs
-          </Link>
+          <div className="space-y-1">
+            <div className="px-4 py-2 font-tech font-medium text-gray-900 dark:text-gray-100">
+              +--[ DOCS ]--+
+            </div>
+            {docsNavigation.map((item) => (
+              <div key={item.name} className="ml-2">
+                {item.path ? (
+                  <Link
+                    to={item.path}
+                    className="block font-tech text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    &gt;&gt; {item.name}
+                  </Link>
+                ) : (
+                  <div className="px-4 py-2 font-tech font-medium text-gray-900 dark:text-gray-100">
+                    &gt;&gt; {item.name}
+                  </div>
+                )}
+                {item.children && item.children.length > 0 && (
+                  <div className="ml-4 space-y-1 border-l border-gray-300 dark:border-gray-600 pl-3">
+                    {item.children.map((child) => (
+                      <Link
+                        key={child.name}
+                        to={child.path}
+                        className="block font-tech text-sm text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        └─ {child.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

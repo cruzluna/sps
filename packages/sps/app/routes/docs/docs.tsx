@@ -50,7 +50,7 @@ const navigation: NavItem[] = [
 export default function Docs() {
   return (
     <div className="flex h-screen font-tech">
-      <div className="w-[250px] border-r border-gray-200 dark:border-gray-700 p-5 h-full overflow-y-auto">
+      <div className="w-[250px] border-r border-gray-200 dark:border-gray-700 p-5 h-full overflow-y-auto hidden md:block">
         <h2 className="mt-0 font-tech">^_Documentation </h2>
         <br className="text-sm text-gray-600 dark:text-gray-300" />
         <nav>
@@ -90,7 +90,7 @@ export default function Docs() {
           </ul>
         </nav>
       </div>
-      <div className="flex-1 p-5 overflow-y-auto">
+      <div className="flex-1 p-5 overflow-y-auto md:ml-0">
         <Outlet />
       </div>
     </div>
