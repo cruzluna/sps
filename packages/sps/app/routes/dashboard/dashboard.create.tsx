@@ -1,11 +1,18 @@
 import { Button } from "~/components/ui/button";
-import { Link, Form, useNavigation, redirect } from "react-router";
+import {
+  Link,
+  Form,
+  useNavigation,
+  useActionData,
+  useNavigate,
+} from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createPrompt } from "~/.server/system-prompt";
 import type { PromptCreateParams } from "system-prompt-storage/resources/prompts";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { savePromptId } from "~/lib/utils";
 
 const CATEGORIES = [
   "typescript",
@@ -46,7 +53,6 @@ const promptSchema = z.object({
 type FormData = z.infer<typeof promptSchema>;
 
 export async function action({ request }: { request: Request }) {
-  console.log("Form submission received");
   const formData = await request.formData();
   const rawData = Object.fromEntries(formData);
   const data: Record<string, any> = { ...rawData };
@@ -69,9 +75,12 @@ export async function action({ request }: { request: Request }) {
       tags: validatedData.tags.length > 0 ? validatedData.tags : null,
     };
 
-    await createPrompt(promptParams);
-    console.log("Prompt created successfully");
-    return redirect("/dashboard/prompts");
+    const createdPrompt = await createPrompt(promptParams);
+
+    // Return the created prompt ID for client-side handling
+    const result = { success: true, promptId: createdPrompt };
+    console.log("createdPrompt", createdPrompt);
+    return result;
   } catch (error) {
     console.error("Form submission error:", error);
     if (error instanceof z.ZodError) {
@@ -85,11 +94,37 @@ export async function action({ request }: { request: Request }) {
 
 export default function CreatePrompt() {
   const navigation = useNavigation();
+  const actionData = useActionData<typeof action>();
+  const navigate = useNavigate();
   const isSubmitting = navigation.state === "submitting";
-  console.log("Form submission state:", navigation.state);
   const [newTag, setNewTag] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagError, setTagError] = useState<string | null>(null);
+
+  // Handle successful prompt creation
+  useEffect(() => {
+    console.log("actionData", actionData);
+    if (
+      actionData &&
+      "success" in actionData &&
+      actionData.success &&
+      "promptId" in actionData &&
+      actionData.promptId
+    ) {
+      console.log("Saving prompt ID to localStorage:", actionData.promptId);
+      try {
+        savePromptId(actionData.promptId as unknown as string);
+        console.log(
+          "Successfully saved to localStorage, navigating to prompts"
+        );
+        navigate("/dashboard/prompts");
+      } catch (error) {
+        console.error("Failed to save prompt ID to localStorage:", error);
+        // Could show an error message here, but still navigate since prompt was created
+        navigate("/dashboard/prompts");
+      }
+    }
+  }, [actionData, navigate]);
 
   const {
     register,

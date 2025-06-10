@@ -16,3 +16,53 @@ export const copyToClipboard = async (text: string, type: "id" | "prompt") => {
       toast.error("Failed to copy");
     }
   };
+
+// Local storage key for prompt IDs
+const PROMPT_IDS_STORAGE_KEY = 'saved_prompt_ids';
+
+// Type for the stored prompt IDs
+type StoredPromptIds = string[];
+
+/**
+ * Get all saved prompt IDs from local storage
+ */
+export const getSavedPromptIds = (): StoredPromptIds => {
+  try {
+    const stored = localStorage.getItem(PROMPT_IDS_STORAGE_KEY);
+    if (!stored) return [];
+    
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    
+    return parsed;
+  } catch (error) {
+    console.error('Error reading from localStorage:', error);
+    return [];
+  }
+};
+
+/**
+ * Save a new prompt ID to local storage
+ */
+export const savePromptId = (id: string): void => {
+  try {
+    const existingIds = getSavedPromptIds();
+    const updatedIds = [...existingIds, id];
+    localStorage.setItem(PROMPT_IDS_STORAGE_KEY, JSON.stringify(updatedIds));
+  } catch (error) {
+    console.error('Error saving to localStorage:', error);
+  }
+};
+
+/**
+ * Remove a prompt ID from local storage
+ */
+export const removePromptId = (id: string): void => {
+  try {
+    const existingIds = getSavedPromptIds();
+    const updatedIds = existingIds.filter(existingId => existingId !== id);
+    localStorage.setItem(PROMPT_IDS_STORAGE_KEY, JSON.stringify(updatedIds));
+  } catch (error) {
+    console.error('Error removing from localStorage:', error);
+  }
+};

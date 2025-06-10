@@ -11,8 +11,6 @@ import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuList,
-  NavigationMenuTrigger,
-  NavigationMenuContent,
 } from "~/components/ui/navigation-menu";
 
 import type { Route } from "./+types/root";
@@ -93,18 +91,18 @@ function Navigation() {
             </NavigationMenuItem>
             <NavigationMenuItem>
               <Link
-                to="/dashboard"
-                className="font-tech text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-2"
-              >
-                Dashboard
-              </Link>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <Link
                 to="/docs"
                 className="font-tech text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-2"
               >
                 Docs
+              </Link>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <Link
+                to="/dashboard"
+                className="font-tech text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-2"
+              >
+                Dashboard
               </Link>
             </NavigationMenuItem>
           </NavigationMenuList>
