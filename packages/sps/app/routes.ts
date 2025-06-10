@@ -4,6 +4,11 @@ export default [
   index("routes/home.tsx"),
   route("prompts", "routes/prompts/prompts.tsx"),
   route("prompt/:id", "routes/prompt.$id.tsx"),
+  route("dashboard", "routes/dashboard/dashboard.tsx", [
+    index("routes/dashboard/dashboard._index.tsx"),
+    route("prompts", "routes/dashboard/dashboard.prompts.tsx"),
+    route("create", "routes/dashboard/dashboard.create.tsx"),
+  ]),
   route("docs", "routes/docs/docs.tsx", [
     index("routes/docs/docs._index.tsx"),
     route("getting-started", "routes/docs/getting-started.tsx"),
