@@ -27,5 +27,6 @@ export default [
     route("upcoming-features", "routes/docs/upcoming-features.tsx"),
   ]),
   route("api/prompts", "routes/api.prompts.tsx"),
+  route("api/promptbyids", "routes/api.promptbyids.tsx"),
   route("*", "routes/catch-all.tsx"),
 ] satisfies RouteConfig;
