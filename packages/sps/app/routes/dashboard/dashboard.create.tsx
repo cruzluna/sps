@@ -113,7 +113,7 @@ export default function CreatePrompt() {
     ) {
       console.log("Saving prompt ID to localStorage:", actionData.promptId);
       try {
-        savePromptId(actionData.promptId as unknown as string);
+        savePromptId(actionData.promptId);
         console.log(
           "Successfully saved to localStorage, navigating to prompts"
         );
