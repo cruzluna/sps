@@ -61,7 +61,7 @@ export default function DashboardPrompts() {
 
   // Banner to show at the top
   const Banner = () => (
-    <div className="md:hidden bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2 fixed top-14 left-0 right-0 z-40 text-yellow-800 dark:text-yellow-200 text-center text-sm font-medium">
+    <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2 text-yellow-800 dark:text-yellow-200 text-center text-sm font-medium">
       Prompts shown are referenced from local store, :kek: ....beta. Might be
       botched
     </div>
@@ -70,13 +70,13 @@ export default function DashboardPrompts() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Banner />
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-tech">My Prompts</h1>
           <Link to="/dashboard/create">
             <Button variant="ascii">+ Create New</Button>
           </Link>
         </div>
+        <Banner />
         <div className="text-center py-8">
           <p className="text-gray-500">Loading your prompts...</p>
         </div>
@@ -87,13 +87,13 @@ export default function DashboardPrompts() {
   if (error) {
     return (
       <div className="space-y-6">
-        <Banner />
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-tech">My Prompts</h1>
           <Link to="/dashboard/create">
             <Button variant="ascii">+ Create New</Button>
           </Link>
         </div>
+        <Banner />
         <div className="text-center py-8">
           <p className="text-red-500">{error}</p>
           <Button
@@ -111,13 +111,13 @@ export default function DashboardPrompts() {
   if (prompts.length === 0) {
     return (
       <div className="space-y-6">
-        <Banner />
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-tech">My Prompts</h1>
           <Link to="/dashboard/create">
             <Button variant="ascii">+ Create New</Button>
           </Link>
         </div>
+        <Banner />
         <div className="text-center py-8">
           <p className="text-gray-500">No saved prompts yet</p>
           <p className="text-sm text-gray-400 mt-2">
@@ -130,13 +130,13 @@ export default function DashboardPrompts() {
 
   return (
     <div className="space-y-6">
-      <Banner />
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-tech">My Prompts</h1>
         <Link to="/dashboard/create">
           <Button variant="ascii">+ Create New</Button>
         </Link>
       </div>
+      <Banner />
 
       <div className="grid gap-4">
         {prompts.map((prompt) => (
