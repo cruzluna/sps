@@ -27,8 +27,8 @@ export async function getPrompt(id: string, params: PromptRetrieveParams = { met
 }
 
 export async function createPrompt(promptParams: PromptCreateParams): Promise<string> {
-    const newPrompt = await client.prompts.create(promptParams);
-    return newPrompt;
+    const newPromptId = await client.prompts.create(promptParams);
+    return newPromptId;
 }
 
 export async function updatePrompt(id: string, prompt: Prompt): Promise<Prompt> {
