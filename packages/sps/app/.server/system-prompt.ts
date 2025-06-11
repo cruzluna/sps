@@ -1,5 +1,5 @@
 import { SystemPromptStorage } from "system-prompt-storage";
-import type { Prompt, PromptListParams, PromptListResponse, PromptRetrieveContentParams, PromptRetrieveParams } from "system-prompt-storage/resources/prompts";
+import type { Prompt, PromptCreateParams, PromptListParams, PromptRetrieveParams, PromptUpdateMetadataParams } from "system-prompt-storage/resources/prompts";
 
 const client = new SystemPromptStorage({
     apiKey:"empty"
@@ -26,3 +26,19 @@ export async function getPrompt(id: string, params: PromptRetrieveParams = { met
     return prompt;
 }
 
+export async function createPrompt(promptParams: PromptCreateParams): Promise<string> {
+    const newPromptId = await client.prompts.create(promptParams);
+    return newPromptId;
+}
+
+export async function updatePrompt(id: string, prompt: Prompt): Promise<Prompt> {
+    const updateParams: PromptUpdateMetadataParams = {
+        id,
+        category: prompt.metadata?.category,
+        description: prompt.metadata?.description,
+        name: prompt.metadata?.name ,
+        tags: prompt.metadata?.tags 
+    };
+    await client.prompts.updateMetadata(updateParams);
+    return prompt;
+}

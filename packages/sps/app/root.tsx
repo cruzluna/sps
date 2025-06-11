@@ -11,8 +11,6 @@ import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuList,
-  NavigationMenuTrigger,
-  NavigationMenuContent,
 } from "~/components/ui/navigation-menu";
 
 import type { Route } from "./+types/root";
@@ -99,6 +97,14 @@ function Navigation() {
                 Docs
               </Link>
             </NavigationMenuItem>
+            <NavigationMenuItem>
+              <Link
+                to="/dashboard"
+                className="font-tech text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-2"
+              >
+                Dashboard
+              </Link>
+            </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
 
@@ -141,6 +147,13 @@ function Navigation() {
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Prompts
+          </Link>
+          <Link
+            to="/dashboard"
+            className="block font-tech text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Dashboard
           </Link>
           <div className="space-y-1">
             <div className="px-4 py-2 font-tech font-medium text-gray-900 dark:text-gray-100">
