@@ -47,8 +47,10 @@ export const getSavedPromptIds = (): StoredPromptIds => {
 export const savePromptId = (id: string): void => {
   try {
     const existingIds = getSavedPromptIds();
-    const updatedIds = [...existingIds, id];
-    localStorage.setItem(PROMPT_IDS_STORAGE_KEY, JSON.stringify(updatedIds));
+    if (!existingIds.includes(id)) {
+      const updatedIds = [...existingIds, id];
+      localStorage.setItem(PROMPT_IDS_STORAGE_KEY, JSON.stringify(updatedIds));
+    }
   } catch (error) {
     console.error('Error saving to localStorage:', error);
   }

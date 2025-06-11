@@ -13,6 +13,7 @@ import { createPrompt } from "~/.server/system-prompt";
 import type { PromptCreateParams } from "system-prompt-storage/resources/prompts";
 import { useState, useEffect } from "react";
 import { savePromptId } from "~/lib/utils";
+import { toast } from "sonner";
 
 const CATEGORIES = [
   "typescript",
@@ -120,8 +121,7 @@ export default function CreatePrompt() {
         navigate("/dashboard/prompts");
       } catch (error) {
         console.error("Failed to save prompt ID to localStorage:", error);
-        // Could show an error message here, but still navigate since prompt was created
-        navigate("/dashboard/prompts");
+        toast.error("Failed to save prompt ID to localStorage");
       }
     }
   }, [actionData, navigate]);
