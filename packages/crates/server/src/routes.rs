@@ -141,7 +141,7 @@ pub async fn get_prompts(
     path = "/prompt",
     request_body = CreatePromptRequest,
     responses(
-        (status = StatusCode::CREATED, description = "Successfully created prompt", body = Prompt),
+        (status = StatusCode::CREATED, description = "Successfully created prompt", body = String),
         (status = StatusCode::BAD_REQUEST, description = "Invalid request body")
     )
 )]

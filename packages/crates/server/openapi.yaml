@@ -29,9 +29,9 @@ paths:
         '201':
           description: Successfully created prompt
           content:
-            application/json:
+            text/plain:
               schema:
-                $ref: '#/components/schemas/Prompt'
+                type: string
         '400':
           description: Invalid request body
   /prompt/metadata:
