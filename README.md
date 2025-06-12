@@ -1,5 +1,4 @@
-# sps - Simple Prompt Storage
-
+# +--[simple prompt storage]--+
 `sps` is a full-stack application designed for storing, versioning, and managing prompts. It consists of a Rust-based backend API and a React-based frontend.
 
 ## Table of Contents
