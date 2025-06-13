@@ -8,6 +8,7 @@ export default [
     index("routes/dashboard/dashboard._index.tsx"),
     route("prompts", "routes/dashboard/dashboard.prompts.tsx"),
     route("create", "routes/dashboard/dashboard.create.tsx"),
+    route("api-keys", "routes/dashboard/dashboard.api-keys.tsx"),
   ]),
   route("docs", "routes/docs/docs.tsx", [
     index("routes/docs/docs._index.tsx"),

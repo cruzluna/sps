@@ -42,3 +42,10 @@ export async function updatePrompt(id: string, prompt: Prompt): Promise<Prompt> 
     await client.prompts.updateMetadata(updateParams);
     return prompt;
 }
+
+export async function generateApiKey(name: string): Promise<{ id: string; key: string }> {
+    // This is a placeholder - will be replaced with actual API call
+    const fakeKey = `sk_${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}`;
+    const id = Math.random().toString(36).substring(2, 15);
+    return { id, key: fakeKey };
+}

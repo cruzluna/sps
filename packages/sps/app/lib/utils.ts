@@ -68,3 +68,48 @@ export const removePromptId = (id: string): void => {
     console.error('Error removing from localStorage:', error);
   }
 };
+
+// API Keys storage
+const API_KEYS_STORAGE_KEY = 'saved_api_keys';
+
+type ApiKey = {
+  id: string;
+  name: string;
+  key: string;
+  createdAt: string;
+};
+
+export const getApiKeys = (): ApiKey[] => {
+  try {
+    const stored = localStorage.getItem(API_KEYS_STORAGE_KEY);
+    if (!stored) return [];
+    
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    
+    return parsed;
+  } catch (error) {
+    console.error('Error reading API keys from localStorage:', error);
+    return [];
+  }
+};
+
+export const saveApiKey = (apiKey: ApiKey): void => {
+  try {
+    const existingKeys = getApiKeys();
+    const updatedKeys = [...existingKeys, apiKey];
+    localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(updatedKeys));
+  } catch (error) {
+    console.error('Error saving API key to localStorage:', error);
+  }
+};
+
+export const removeApiKey = (id: string): void => {
+  try {
+    const existingKeys = getApiKeys();
+    const updatedKeys = existingKeys.filter(key => key.id !== id);
+    localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(updatedKeys));
+  } catch (error) {
+    console.error('Error removing API key from localStorage:', error);
+  }
+};

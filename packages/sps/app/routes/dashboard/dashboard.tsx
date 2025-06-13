@@ -16,8 +16,8 @@ const navigation: NavItem[] = [
     path: "/dashboard/create",
   },
   {
-    name: "Settings",
-    path: "/dashboard/settings",
+    name: "API Keys",
+    path: "/dashboard/api-keys",
   },
 ];
 
