@@ -143,7 +143,7 @@ export default function ApiKeysPage() {
               </code>
               <Button
                 variant={"ascii"}
-                onClick={() => copyToClipboard(apiKey.key, "id")}
+                onClick={() => copyToClipboard(apiKey.key, "key")}
               >
                 Copy
               </Button>

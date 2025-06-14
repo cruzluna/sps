@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 
-export const copyToClipboard = async (text: string, type: "id" | "prompt") => {
+export const copyToClipboard = async (text: string, type: "id" | "prompt" | "key") => {
     try {
       await navigator.clipboard.writeText(text);
       toast(`copied ${type}`);
@@ -97,6 +97,12 @@ export const getApiKeys = (): ApiKey[] => {
 export const saveApiKey = (apiKey: ApiKey): void => {
   try {
     const existingKeys = getApiKeys();
+    // Check if a key with the same name already exists
+    const isDuplicate = existingKeys.some(key => key.name === apiKey.name);
+    if (isDuplicate) {
+      console.warn('API key with this name already exists');
+      return;
+    }
     const updatedKeys = [...existingKeys, apiKey];
     localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(updatedKeys));
   } catch (error) {
