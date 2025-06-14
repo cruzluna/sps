@@ -1,20 +1,20 @@
 import SyntaxHighlighter from "react-syntax-highlighter";
 
 export default function OpenApiSpecPage() {
-  return (
-    <div className="font-tech">
-      <h1 className="font-tech">OpenAPI Specification</h1>
-      <a
-        href="https://api.cruzluna.dev/swagger-ui"
-        className="font-tech"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {`>>`} https://api.cruzluna.dev/swagger-ui
-      </a>
-      <div className="max-w-4xl">
-        <SyntaxHighlighter language="yaml" className="font-tech">
-          {`openapi: 3.1.0
+	return (
+		<div className="font-tech">
+			<h1 className="font-tech">OpenAPI Specification</h1>
+			<a
+				href="https://api.cruzluna.dev/swagger-ui"
+				className="font-tech"
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				{`>>`} https://api.cruzluna.dev/swagger-ui
+			</a>
+			<div className="max-w-4xl">
+				<SyntaxHighlighter language="yaml" className="font-tech">
+					{`openapi: 3.1.0
 info:
   title: Simple Prompt Storage API
   description: |-
@@ -323,8 +323,8 @@ components:
           items:
             type: string
           description: The tags of the prompt`}
-        </SyntaxHighlighter>
-      </div>
-    </div>
-  );
+				</SyntaxHighlighter>
+			</div>
+		</div>
+	);
 }
