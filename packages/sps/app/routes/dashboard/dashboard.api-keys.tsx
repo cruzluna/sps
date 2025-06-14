@@ -54,6 +54,7 @@ export async function action({ request }: ActionFunctionArgs) {
 export default function ApiKeysPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
+  const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
   const fetcher = useFetcher<ActionData>();
   const isGenerating = fetcher.state === "submitting";
 
@@ -88,6 +89,12 @@ export default function ApiKeysPage() {
     removeApiKey(id);
     setApiKeys(apiKeys.filter((key) => key.id !== id));
     toast.success("API key deleted");
+  };
+
+  const handleCopy = (key: string, id: string) => {
+    copyToClipboard(key, "key", false);
+    setCopiedKeyId(id);
+    setTimeout(() => setCopiedKeyId(null), 2500);
   };
 
   // TODO: Update input to be a form with RHF
@@ -148,9 +155,9 @@ export default function ApiKeysPage() {
               </code>
               <Button
                 variant={"ascii"}
-                onClick={() => copyToClipboard(apiKey.key, "key")}
+                onClick={() => handleCopy(apiKey.key, apiKey.id)}
               >
-                Copy
+                {copiedKeyId === apiKey.id ? "Copied" : "Copy"}
               </Button>
             </div>
           </div>

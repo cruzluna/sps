@@ -1,24 +1,29 @@
-import { clsx, type ClassValue } from "clsx"
+import { clsx, type ClassValue } from "clsx";
 import { toast } from "sonner";
-import { twMerge } from "tailwind-merge"
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
-
-export const copyToClipboard = async (text: string, type: "id" | "prompt" | "key") => {
-    try {
-      await navigator.clipboard.writeText(text);
+export const copyToClipboard = async (
+  text: string,
+  type: "id" | "prompt" | "key",
+  toastedEnabled: boolean = true
+) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    if (toastedEnabled) {
       toast(`copied ${type}`);
-    } catch (err) {
-      console.error("Failed to copy text: ", err);
-      toast.error("Failed to copy");
     }
-  };
+  } catch (err) {
+    console.error("Failed to copy text: ", err);
+    toast.error("Failed to copy");
+  }
+};
 
 // Local storage key for prompt IDs
-const PROMPT_IDS_STORAGE_KEY = 'saved_prompt_ids';
+const PROMPT_IDS_STORAGE_KEY = "saved_prompt_ids";
 
 // Type for the stored prompt IDs
 type StoredPromptIds = string[];
@@ -30,13 +35,13 @@ export const getSavedPromptIds = (): StoredPromptIds => {
   try {
     const stored = localStorage.getItem(PROMPT_IDS_STORAGE_KEY);
     if (!stored) return [];
-    
+
     const parsed = JSON.parse(stored);
     if (!Array.isArray(parsed)) return [];
-    
+
     return parsed;
   } catch (error) {
-    console.error('Error reading from localStorage:', error);
+    console.error("Error reading from localStorage:", error);
     return [];
   }
 };
@@ -52,7 +57,7 @@ export const savePromptId = (id: string): void => {
       localStorage.setItem(PROMPT_IDS_STORAGE_KEY, JSON.stringify(updatedIds));
     }
   } catch (error) {
-    console.error('Error saving to localStorage:', error);
+    console.error("Error saving to localStorage:", error);
   }
 };
 
@@ -62,15 +67,15 @@ export const savePromptId = (id: string): void => {
 export const removePromptId = (id: string): void => {
   try {
     const existingIds = getSavedPromptIds();
-    const updatedIds = existingIds.filter(existingId => existingId !== id);
+    const updatedIds = existingIds.filter((existingId) => existingId !== id);
     localStorage.setItem(PROMPT_IDS_STORAGE_KEY, JSON.stringify(updatedIds));
   } catch (error) {
-    console.error('Error removing from localStorage:', error);
+    console.error("Error removing from localStorage:", error);
   }
 };
 
 // API Keys storage
-const API_KEYS_STORAGE_KEY = 'saved_api_keys';
+const API_KEYS_STORAGE_KEY = "saved_api_keys";
 
 type ApiKey = {
   id: string;
@@ -83,36 +88,38 @@ export const getApiKeys = (): ApiKey[] => {
   try {
     const stored = localStorage.getItem(API_KEYS_STORAGE_KEY);
     if (!stored) return [];
-    
+
     const parsed = JSON.parse(stored);
     if (!Array.isArray(parsed)) return [];
-    
+
     return parsed;
   } catch (error) {
-    console.error('Error reading API keys from localStorage:', error);
+    console.error("Error reading API keys from localStorage:", error);
     return [];
   }
 };
 
-export const saveApiKey = (apiKey: ApiKey): { success: boolean; error?: string } => {
+export const saveApiKey = (
+  apiKey: ApiKey
+): { success: boolean; error?: string } => {
   try {
     const existingKeys = getApiKeys();
     // Check if a key with the same name already exists
-    const isDuplicate = existingKeys.some(key => key.name === apiKey.name);
+    const isDuplicate = existingKeys.some((key) => key.name === apiKey.name);
     if (isDuplicate) {
-      return { 
-        success: false, 
-        error: 'API key with this name already exists' 
+      return {
+        success: false,
+        error: "API key with this name already exists",
       };
     }
     const updatedKeys = [...existingKeys, apiKey];
     localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(updatedKeys));
     return { success: true };
   } catch (error) {
-    console.error('Error saving API key to localStorage:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to save API key' 
+    console.error("Error saving API key to localStorage:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to save API key",
     };
   }
 };
@@ -120,9 +127,9 @@ export const saveApiKey = (apiKey: ApiKey): { success: boolean; error?: string }
 export const removeApiKey = (id: string): void => {
   try {
     const existingKeys = getApiKeys();
-    const updatedKeys = existingKeys.filter(key => key.id !== id);
+    const updatedKeys = existingKeys.filter((key) => key.id !== id);
     localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(updatedKeys));
   } catch (error) {
-    console.error('Error removing API key from localStorage:', error);
+    console.error("Error removing API key from localStorage:", error);
   }
 };
