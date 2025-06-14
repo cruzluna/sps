@@ -64,10 +64,14 @@ export default function ApiKeysPage() {
   useEffect(() => {
     if (fetcher.data?.success && fetcher.data?.apiKey) {
       const newApiKey = fetcher.data.apiKey;
-      saveApiKey(newApiKey);
-      setApiKeys((prev) => [...prev, newApiKey]);
-      setNewKeyName("");
-      toast.success("API key generated successfully");
+      const result = saveApiKey(newApiKey);
+      if (result.success) {
+        setApiKeys((prev) => [...prev, newApiKey]);
+        setNewKeyName("");
+        toast.success("API key generated successfully");
+      } else {
+        toast.error(result.error || "Failed to save API key");
+      }
     }
   }, [fetcher.data]);
 
@@ -86,6 +90,7 @@ export default function ApiKeysPage() {
     toast.success("API key deleted");
   };
 
+  // TODO: Update input to be a form with RHF
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2 text-yellow-800 dark:text-yellow-200 text-center text-sm font-medium mb-6">

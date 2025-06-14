@@ -94,19 +94,26 @@ export const getApiKeys = (): ApiKey[] => {
   }
 };
 
-export const saveApiKey = (apiKey: ApiKey): void => {
+export const saveApiKey = (apiKey: ApiKey): { success: boolean; error?: string } => {
   try {
     const existingKeys = getApiKeys();
     // Check if a key with the same name already exists
     const isDuplicate = existingKeys.some(key => key.name === apiKey.name);
     if (isDuplicate) {
-      console.warn('API key with this name already exists');
-      return;
+      return { 
+        success: false, 
+        error: 'API key with this name already exists' 
+      };
     }
     const updatedKeys = [...existingKeys, apiKey];
     localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(updatedKeys));
+    return { success: true };
   } catch (error) {
     console.error('Error saving API key to localStorage:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to save API key' 
+    };
   }
 };
 
