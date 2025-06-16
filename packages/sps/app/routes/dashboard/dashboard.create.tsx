@@ -14,6 +14,13 @@ import type { PromptCreateParams } from "system-prompt-storage/resources/prompts
 import { useState, useEffect } from "react";
 import { savePromptId } from "~/lib/utils";
 import { toast } from "sonner";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "~/components/ui/select";
 
 const CATEGORIES = [
 	"typescript",
@@ -220,18 +227,22 @@ export default function CreatePrompt() {
 					>
 						Category
 					</label>
-					<select
+					<Select
 						{...register("category")}
 						id="category"
 						className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-black font-tech"
 					>
-						<option value="">Select a category</option>
-						{CATEGORIES.map((category) => (
-							<option key={category} value={category}>
-								{category}
-							</option>
-						))}
-					</select>
+						<SelectTrigger>
+							<SelectValue placeholder="Select a category" />
+						</SelectTrigger>
+						<SelectContent>
+							{CATEGORIES.map((category) => (
+								<SelectItem key={category} value={category}>
+									{category}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 					{errors.category && (
 						<p className="text-red-500 text-sm">{errors.category.message}</p>
 					)}
