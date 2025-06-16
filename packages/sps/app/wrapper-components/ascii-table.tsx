@@ -53,6 +53,7 @@ export default function AsciiTable({ prompts }: AsciiTableProps) {
 								</AsciiCardDescription>
 							</AsciiCardHeader>
 							<AsciiCardContent>
+								<Link to={`/prompt/${prompt.id}`}>
 								<div
 									className="max-h-[200px] overflow-y-auto font-mono text-sm whitespace-pre-wrap pr-2
                   scrollbar-thin scrollbar-track-gray-100 dark:scrollbar-track-gray-800
@@ -61,6 +62,7 @@ export default function AsciiTable({ prompts }: AsciiTableProps) {
 								>
 									{prompt.content}
 								</div>
+								</Link>
 							</AsciiCardContent>
 							<AsciiCardFooter className="text-xs !transition-none">
 								<div className="flex justify-between items-center w-full">
