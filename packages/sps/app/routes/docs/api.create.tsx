@@ -1,4 +1,5 @@
 import { ApiEndpoint } from "~/components/docs-components";
+import { codeSnippets } from "./code-snippets";
 
 export default function CreateApiPage() {
 	return (
@@ -52,7 +53,8 @@ export default function CreateApiPage() {
 						description: "Whether the prompt is being branched",
 					},
 				]}
-				responseType="201 - Prompt object | 400 - Invalid request body"
+				responseType="201 - Prompt id | 400 - Invalid request body"
+				codeSnippets={codeSnippets.createPrompt}
 			/>
 		</div>
 	);

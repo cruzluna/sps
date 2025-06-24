@@ -1,4 +1,5 @@
 import { ApiEndpoint } from "~/components/docs-components";
+import { codeSnippets } from "./code-snippets";
 
 export default function UpdateApiPage() {
 	return (
@@ -40,6 +41,7 @@ export default function UpdateApiPage() {
 					},
 				]}
 				responseType="200 - Successfully updated prompt metadata | 400 - Invalid request body | 404 - Prompt not found"
+				codeSnippets={codeSnippets.updatePrompt}
 			/>
 		</div>
 	);
