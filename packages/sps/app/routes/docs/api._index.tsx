@@ -14,7 +14,7 @@ from system_prompt_storage import SystemPromptStorage
 client = SystemPromptStorage(
 	api_key=os.environ.get(
 		"SYSTEM_PROMPT_STORAGE_API_KEY"
-	),  // This is the default and can be omitted
+	),  # This is the default and can be omitted
 )
 `,
 };
