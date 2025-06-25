@@ -1,4 +1,5 @@
 import SyntaxHighlighter from "react-syntax-highlighter";
+import { useState } from "react";
 
 type Parameter = {
 	name: string;
@@ -13,7 +14,22 @@ type ApiEndpointProps = {
 	description: string;
 	parameters?: Parameter[];
 	responseType: string;
-	codeSnippet?: string;
+	codeSnippets: {
+		[key: string]: string;
+	};
+};
+
+const LANGUAGE_LABELS: Record<string, string> = {
+	typescript: "TypeScript",
+	python: "Python",
+	javascript: "JavaScript",
+	curl: "cURL",
+	go: "Go",
+	ruby: "Ruby",
+	java: "Java",
+	php: "PHP",
+	swift: "Swift",
+	csharp: "C#",
 };
 
 export function ApiEndpoint({
@@ -22,8 +38,14 @@ export function ApiEndpoint({
 	description,
 	parameters = [],
 	responseType,
-	codeSnippet,
+	codeSnippets,
 }: ApiEndpointProps) {
+	const languages = Object.keys(codeSnippets);
+	const [selectedLang, setSelectedLang] = useState<string>(
+		languages[0] || "typescript"
+	);
+	const [copied, setCopied] = useState(false);
+
 	const getMethodColor = (method: string) => {
 		switch (method.toUpperCase()) {
 			case "GET":
@@ -56,10 +78,37 @@ export function ApiEndpoint({
 				{description}
 			</p>
 
-			{codeSnippet ? (
+			{languages.length > 0 ? (
 				<div className="mb-6 max-w-4xl">
-					<SyntaxHighlighter language="bash" className="font-tech">
-						{codeSnippet}
+					<div className="flex items-center bg-[#181c23] rounded-t-md px-2 py-1 gap-2">
+						{languages.map((lang) => (
+							<button
+								type="button"
+								key={lang}
+								onClick={() => setSelectedLang(lang)}
+								className={`font-tech px-3 py-1 rounded-t-md focus:outline-none transition-colors text-sm ${
+									selectedLang === lang
+										? "bg-[#181c23] text-white border-b-2 border-white"
+									: "bg-transparent text-gray-400 hover:text-white"
+								}`}
+							>
+								{LANGUAGE_LABELS[lang] || lang.charAt(0).toUpperCase() + lang.slice(1)}
+							</button>
+						))}
+						<button
+							type="button"
+							onClick={async () => {
+								await navigator.clipboard.writeText(codeSnippets[selectedLang] || "");
+								setCopied(true);
+								setTimeout(() => setCopied(false), 1200);
+							}}
+							className="ml-auto text-xs text-gray-400 pr-3 hover:text-white focus:outline-none"
+						>
+							{copied ? "^copied" : "copy"}
+						</button>
+					</div>
+					<SyntaxHighlighter language={selectedLang} className="font-tech rounded-b-md">
+						{codeSnippets[selectedLang] || ""}
 					</SyntaxHighlighter>
 				</div>
 			) : (

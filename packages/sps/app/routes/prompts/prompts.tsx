@@ -6,7 +6,7 @@ import { useFetcher } from "react-router";
 
 const ITEMS_PER_PAGE = 12;
 
-export async function loader({}: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
 	const { getPrompts, getPromptCategories } = await import(
 		"~/.server/system-prompt"
 	);
@@ -34,7 +34,7 @@ export default function Prompts({ loaderData }: Route.ComponentProps) {
 			if (fetcher.data.length === 0) {
 				setHasMore(false);
 			} else {
-				setPrompts((prev) => [...prev, ...fetcher.data!]);
+				setPrompts((prev) => [...prev, ...(fetcher.data ?? [])]);
 			}
 		}
 	}, [fetcher.data]);
@@ -104,6 +104,7 @@ export default function Prompts({ loaderData }: Route.ComponentProps) {
 								? "font-bold"
 								: "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
 						}`}
+						type="button"
 					>
 						All
 					</button>
@@ -111,6 +112,7 @@ export default function Prompts({ loaderData }: Route.ComponentProps) {
 						<button
 							key={category}
 							onClick={() => handleCategoryChange(category)}
+							type="button"
 							className={`px-3 py-1 text-sm transition-colors ${
 								selectedCategory === category
 									? "font-bold"
@@ -124,6 +126,7 @@ export default function Prompts({ loaderData }: Route.ComponentProps) {
 
 				<button
 					onClick={scrollToTop}
+					type="button"
 					className="px-3 py-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
 				>
 					scroll to top^

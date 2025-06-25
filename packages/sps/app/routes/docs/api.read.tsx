@@ -1,4 +1,5 @@
 import { ApiEndpoint } from "~/components/docs-components";
+import { codeSnippets } from "./code-snippets";
 
 export default function ReadApiPage() {
 	return (
@@ -22,6 +23,7 @@ export default function ReadApiPage() {
 					},
 				]}
 				responseType="200 - Prompt object | 404 - Prompt not found | 500 - Internal server error"
+				codeSnippets={codeSnippets.getPrompt}
 			/>
 
 			<ApiEndpoint
@@ -43,6 +45,7 @@ export default function ReadApiPage() {
 					},
 				]}
 				responseType="200 - Prompt content (text/plain) | 404 - Prompt not found | 500 - Internal server error"
+				codeSnippets={codeSnippets.getPromptContent}
 			/>
 
 			<ApiEndpoint
@@ -71,6 +74,7 @@ export default function ReadApiPage() {
 					},
 				]}
 				responseType="200 - Array of Prompt objects | 400 - Invalid request body"
+				codeSnippets={codeSnippets.listPrompts}
 			/>
 		</div>
 	);

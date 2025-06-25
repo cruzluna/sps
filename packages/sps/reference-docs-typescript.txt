@@ -1,0 +1,1427 @@
+Types:
+
+    Prompt
+    PromptCreateResponse
+    PromptListResponse
+    PromptRetrieveContentResponse
+    PromptUpdateMetadataResponse
+
+Methods:
+
+    client.prompts.create({ ...params }) -> string
+    client.prompts.retrieve(id, { ...params }) -> Prompt
+    client.prompts.list({ ...params }) -> PromptListResponse
+    client.prompts.delete(id) -> void
+    client.prompts.retrieveContent(id, { ...params }) -> string
+    client.prompts.updateMetadata({ ...params }) -> string
+
+Prompt:
+
+import { APIResource } from '../core/resource';
+import { APIPromise } from '../core/api-promise';
+import { buildHeaders } from '../internal/headers';
+import { RequestOptions } from '../internal/request-options';
+import { path } from '../internal/utils/path';
+
+export class Prompts extends APIResource {
+  /**
+   * Create prompt or update it by passing the parent id
+   */
+  create(body: PromptCreateParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.post('/prompt', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get entire prompt with option to include metadata
+   */
+  retrieve(
+    id: string,
+    query: PromptRetrieveParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<Prompt> {
+    return this._client.get(path`/prompt/${id}`, { query, ...options });
+  }
+
+  /**
+   * Get list of prompts with pagination
+   */
+  list(
+    query: PromptListParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<PromptListResponse> {
+    return this._client.get('/prompts', { query, ...options });
+  }
+
+  /**
+   * Delete prompt
+   */
+  delete(id: string, options?: RequestOptions): APIPromise<void> {
+    return this._client.delete(path`/prompt/${id}`, {
+      ...options,
+      headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get prompt content
+   */
+  retrieveContent(
+    id: string,
+    query: PromptRetrieveContentParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<string> {
+    return this._client.get(path`/prompt/${id}/content`, {
+      query,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Update prompt metadata
+   */
+  updateMetadata(body: PromptUpdateMetadataParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.put('/prompt/metadata', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+}
+
+export interface Prompt {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * The creation date of the prompt
+   */
+  created_at: number;
+
+  /**
+   * The parent of the prompt
+   */
+  parent: string;
+
+  /**
+   * The version of the prompt
+   */
+  version: number;
+
+  /**
+   * Whether the prompt is archived
+   */
+  archived?: boolean | null;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The metadata of the prompt
+   */
+  metadata?: Prompt.Metadata | null;
+}
+
+export namespace Prompt {
+  /**
+   * The metadata of the prompt
+   */
+  export interface Metadata {
+    /**
+     * Category of the prompt ie React, typescript, etc.
+     */
+    category?: string | null;
+
+    /**
+     * Description of the prompt
+     */
+    description?: string | null;
+
+    /**
+     * Name of the prompt
+     */
+    name?: string | null;
+
+    /**
+     * Tags of the prompt ie [react, typescript, etc.]
+     */
+    tags?: Array<string> | null;
+  }
+}
+
+export type PromptCreateResponse = string;
+
+export type PromptListResponse = Array<Prompt>;
+
+export type PromptRetrieveContentResponse = string;
+
+export type PromptUpdateMetadataResponse = string;
+
+export interface PromptCreateParams {
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The parent of the prompt. If its a new prompt with no lineage, this should be
+   * None.
+   */
+  parent?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export interface PromptRetrieveParams {
+  /**
+   * Whether to include metadata in the response
+   */
+  metadata?: boolean;
+}
+
+export interface PromptListParams {
+  /**
+   * The category of the prompts to return
+   */
+  category?: string;
+
+  /**
+   * The number of prompts to return. Default is 10.
+   */
+  limit?: number;
+
+  /**
+   * The pagination offset to start from (0-based). Default is 0.
+   */
+  offset?: number;
+}
+
+export interface PromptRetrieveContentParams {
+  /**
+   * Latest version of the prompt
+   */
+  latest?: boolean;
+}
+
+export interface PromptUpdateMetadataParams {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export declare namespace Prompts {
+  export {
+    type Prompt as Prompt,
+    type PromptCreateResponse as PromptCreateResponse,
+    type PromptListResponse as PromptListResponse,
+    type PromptRetrieveContentResponse as PromptRetrieveContentResponse,
+    type PromptUpdateMetadataResponse as PromptUpdateMetadataResponse,
+    type PromptCreateParams as PromptCreateParams,
+    type PromptRetrieveParams as PromptRetrieveParams,
+    type PromptListParams as PromptListParams,
+    type PromptRetrieveContentParams as PromptRetrieveContentParams,
+    type PromptUpdateMetadataParams as PromptUpdateMetadataParams,
+  };
+}
+
+
+PromptCreateResponse:
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+import { APIResource } from '../core/resource';
+import { APIPromise } from '../core/api-promise';
+import { buildHeaders } from '../internal/headers';
+import { RequestOptions } from '../internal/request-options';
+import { path } from '../internal/utils/path';
+
+export class Prompts extends APIResource {
+  /**
+   * Create prompt or update it by passing the parent id
+   */
+  create(body: PromptCreateParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.post('/prompt', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get entire prompt with option to include metadata
+   */
+  retrieve(
+    id: string,
+    query: PromptRetrieveParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<Prompt> {
+    return this._client.get(path`/prompt/${id}`, { query, ...options });
+  }
+
+  /**
+   * Get list of prompts with pagination
+   */
+  list(
+    query: PromptListParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<PromptListResponse> {
+    return this._client.get('/prompts', { query, ...options });
+  }
+
+  /**
+   * Delete prompt
+   */
+  delete(id: string, options?: RequestOptions): APIPromise<void> {
+    return this._client.delete(path`/prompt/${id}`, {
+      ...options,
+      headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get prompt content
+   */
+  retrieveContent(
+    id: string,
+    query: PromptRetrieveContentParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<string> {
+    return this._client.get(path`/prompt/${id}/content`, {
+      query,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Update prompt metadata
+   */
+  updateMetadata(body: PromptUpdateMetadataParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.put('/prompt/metadata', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+}
+
+export interface Prompt {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * The creation date of the prompt
+   */
+  created_at: number;
+
+  /**
+   * The parent of the prompt
+   */
+  parent: string;
+
+  /**
+   * The version of the prompt
+   */
+  version: number;
+
+  /**
+   * Whether the prompt is archived
+   */
+  archived?: boolean | null;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The metadata of the prompt
+   */
+  metadata?: Prompt.Metadata | null;
+}
+
+export namespace Prompt {
+  /**
+   * The metadata of the prompt
+   */
+  export interface Metadata {
+    /**
+     * Category of the prompt ie React, typescript, etc.
+     */
+    category?: string | null;
+
+    /**
+     * Description of the prompt
+     */
+    description?: string | null;
+
+    /**
+     * Name of the prompt
+     */
+    name?: string | null;
+
+    /**
+     * Tags of the prompt ie [react, typescript, etc.]
+     */
+    tags?: Array<string> | null;
+  }
+}
+
+export type PromptCreateResponse = string;
+
+export type PromptListResponse = Array<Prompt>;
+
+export type PromptRetrieveContentResponse = string;
+
+export type PromptUpdateMetadataResponse = string;
+
+export interface PromptCreateParams {
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The parent of the prompt. If its a new prompt with no lineage, this should be
+   * None.
+   */
+  parent?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export interface PromptRetrieveParams {
+  /**
+   * Whether to include metadata in the response
+   */
+  metadata?: boolean;
+}
+
+export interface PromptListParams {
+  /**
+   * The category of the prompts to return
+   */
+  category?: string;
+
+  /**
+   * The number of prompts to return. Default is 10.
+   */
+  limit?: number;
+
+  /**
+   * The pagination offset to start from (0-based). Default is 0.
+   */
+  offset?: number;
+}
+
+export interface PromptRetrieveContentParams {
+  /**
+   * Latest version of the prompt
+   */
+  latest?: boolean;
+}
+
+export interface PromptUpdateMetadataParams {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export declare namespace Prompts {
+  export {
+    type Prompt as Prompt,
+    type PromptCreateResponse as PromptCreateResponse,
+    type PromptListResponse as PromptListResponse,
+    type PromptRetrieveContentResponse as PromptRetrieveContentResponse,
+    type PromptUpdateMetadataResponse as PromptUpdateMetadataResponse,
+    type PromptCreateParams as PromptCreateParams,
+    type PromptRetrieveParams as PromptRetrieveParams,
+    type PromptListParams as PromptListParams,
+    type PromptRetrieveContentParams as PromptRetrieveContentParams,
+    type PromptUpdateMetadataParams as PromptUpdateMetadataParams,
+  };
+}
+
+PromptListResponse:
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+import { APIResource } from '../core/resource';
+import { APIPromise } from '../core/api-promise';
+import { buildHeaders } from '../internal/headers';
+import { RequestOptions } from '../internal/request-options';
+import { path } from '../internal/utils/path';
+
+export class Prompts extends APIResource {
+  /**
+   * Create prompt or update it by passing the parent id
+   */
+  create(body: PromptCreateParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.post('/prompt', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get entire prompt with option to include metadata
+   */
+  retrieve(
+    id: string,
+    query: PromptRetrieveParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<Prompt> {
+    return this._client.get(path`/prompt/${id}`, { query, ...options });
+  }
+
+  /**
+   * Get list of prompts with pagination
+   */
+  list(
+    query: PromptListParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<PromptListResponse> {
+    return this._client.get('/prompts', { query, ...options });
+  }
+
+  /**
+   * Delete prompt
+   */
+  delete(id: string, options?: RequestOptions): APIPromise<void> {
+    return this._client.delete(path`/prompt/${id}`, {
+      ...options,
+      headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get prompt content
+   */
+  retrieveContent(
+    id: string,
+    query: PromptRetrieveContentParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<string> {
+    return this._client.get(path`/prompt/${id}/content`, {
+      query,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Update prompt metadata
+   */
+  updateMetadata(body: PromptUpdateMetadataParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.put('/prompt/metadata', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+}
+
+export interface Prompt {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * The creation date of the prompt
+   */
+  created_at: number;
+
+  /**
+   * The parent of the prompt
+   */
+  parent: string;
+
+  /**
+   * The version of the prompt
+   */
+  version: number;
+
+  /**
+   * Whether the prompt is archived
+   */
+  archived?: boolean | null;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The metadata of the prompt
+   */
+  metadata?: Prompt.Metadata | null;
+}
+
+export namespace Prompt {
+  /**
+   * The metadata of the prompt
+   */
+  export interface Metadata {
+    /**
+     * Category of the prompt ie React, typescript, etc.
+     */
+    category?: string | null;
+
+    /**
+     * Description of the prompt
+     */
+    description?: string | null;
+
+    /**
+     * Name of the prompt
+     */
+    name?: string | null;
+
+    /**
+     * Tags of the prompt ie [react, typescript, etc.]
+     */
+    tags?: Array<string> | null;
+  }
+}
+
+export type PromptCreateResponse = string;
+
+export type PromptListResponse = Array<Prompt>;
+
+export type PromptRetrieveContentResponse = string;
+
+export type PromptUpdateMetadataResponse = string;
+
+export interface PromptCreateParams {
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The parent of the prompt. If its a new prompt with no lineage, this should be
+   * None.
+   */
+  parent?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export interface PromptRetrieveParams {
+  /**
+   * Whether to include metadata in the response
+   */
+  metadata?: boolean;
+}
+
+export interface PromptListParams {
+  /**
+   * The category of the prompts to return
+   */
+  category?: string;
+
+  /**
+   * The number of prompts to return. Default is 10.
+   */
+  limit?: number;
+
+  /**
+   * The pagination offset to start from (0-based). Default is 0.
+   */
+  offset?: number;
+}
+
+export interface PromptRetrieveContentParams {
+  /**
+   * Latest version of the prompt
+   */
+  latest?: boolean;
+}
+
+export interface PromptUpdateMetadataParams {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export declare namespace Prompts {
+  export {
+    type Prompt as Prompt,
+    type PromptCreateResponse as PromptCreateResponse,
+    type PromptListResponse as PromptListResponse,
+    type PromptRetrieveContentResponse as PromptRetrieveContentResponse,
+    type PromptUpdateMetadataResponse as PromptUpdateMetadataResponse,
+    type PromptCreateParams as PromptCreateParams,
+    type PromptRetrieveParams as PromptRetrieveParams,
+    type PromptListParams as PromptListParams,
+    type PromptRetrieveContentParams as PromptRetrieveContentParams,
+    type PromptUpdateMetadataParams as PromptUpdateMetadataParams,
+  };
+}
+
+PromptRetrieveContentResponse:
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+import { APIResource } from '../core/resource';
+import { APIPromise } from '../core/api-promise';
+import { buildHeaders } from '../internal/headers';
+import { RequestOptions } from '../internal/request-options';
+import { path } from '../internal/utils/path';
+
+export class Prompts extends APIResource {
+  /**
+   * Create prompt or update it by passing the parent id
+   */
+  create(body: PromptCreateParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.post('/prompt', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get entire prompt with option to include metadata
+   */
+  retrieve(
+    id: string,
+    query: PromptRetrieveParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<Prompt> {
+    return this._client.get(path`/prompt/${id}`, { query, ...options });
+  }
+
+  /**
+   * Get list of prompts with pagination
+   */
+  list(
+    query: PromptListParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<PromptListResponse> {
+    return this._client.get('/prompts', { query, ...options });
+  }
+
+  /**
+   * Delete prompt
+   */
+  delete(id: string, options?: RequestOptions): APIPromise<void> {
+    return this._client.delete(path`/prompt/${id}`, {
+      ...options,
+      headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get prompt content
+   */
+  retrieveContent(
+    id: string,
+    query: PromptRetrieveContentParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<string> {
+    return this._client.get(path`/prompt/${id}/content`, {
+      query,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Update prompt metadata
+   */
+  updateMetadata(body: PromptUpdateMetadataParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.put('/prompt/metadata', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+}
+
+export interface Prompt {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * The creation date of the prompt
+   */
+  created_at: number;
+
+  /**
+   * The parent of the prompt
+   */
+  parent: string;
+
+  /**
+   * The version of the prompt
+   */
+  version: number;
+
+  /**
+   * Whether the prompt is archived
+   */
+  archived?: boolean | null;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The metadata of the prompt
+   */
+  metadata?: Prompt.Metadata | null;
+}
+
+export namespace Prompt {
+  /**
+   * The metadata of the prompt
+   */
+  export interface Metadata {
+    /**
+     * Category of the prompt ie React, typescript, etc.
+     */
+    category?: string | null;
+
+    /**
+     * Description of the prompt
+     */
+    description?: string | null;
+
+    /**
+     * Name of the prompt
+     */
+    name?: string | null;
+
+    /**
+     * Tags of the prompt ie [react, typescript, etc.]
+     */
+    tags?: Array<string> | null;
+  }
+}
+
+export type PromptCreateResponse = string;
+
+export type PromptListResponse = Array<Prompt>;
+
+export type PromptRetrieveContentResponse = string;
+
+export type PromptUpdateMetadataResponse = string;
+
+export interface PromptCreateParams {
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The parent of the prompt. If its a new prompt with no lineage, this should be
+   * None.
+   */
+  parent?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export interface PromptRetrieveParams {
+  /**
+   * Whether to include metadata in the response
+   */
+  metadata?: boolean;
+}
+
+export interface PromptListParams {
+  /**
+   * The category of the prompts to return
+   */
+  category?: string;
+
+  /**
+   * The number of prompts to return. Default is 10.
+   */
+  limit?: number;
+
+  /**
+   * The pagination offset to start from (0-based). Default is 0.
+   */
+  offset?: number;
+}
+
+export interface PromptRetrieveContentParams {
+  /**
+   * Latest version of the prompt
+   */
+  latest?: boolean;
+}
+
+export interface PromptUpdateMetadataParams {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export declare namespace Prompts {
+  export {
+    type Prompt as Prompt,
+    type PromptCreateResponse as PromptCreateResponse,
+    type PromptListResponse as PromptListResponse,
+    type PromptRetrieveContentResponse as PromptRetrieveContentResponse,
+    type PromptUpdateMetadataResponse as PromptUpdateMetadataResponse,
+    type PromptCreateParams as PromptCreateParams,
+    type PromptRetrieveParams as PromptRetrieveParams,
+    type PromptListParams as PromptListParams,
+    type PromptRetrieveContentParams as PromptRetrieveContentParams,
+    type PromptUpdateMetadataParams as PromptUpdateMetadataParams,
+  };
+}
+
+PromptUpdateMetadataResponse:
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+import { APIResource } from '../core/resource';
+import { APIPromise } from '../core/api-promise';
+import { buildHeaders } from '../internal/headers';
+import { RequestOptions } from '../internal/request-options';
+import { path } from '../internal/utils/path';
+
+export class Prompts extends APIResource {
+  /**
+   * Create prompt or update it by passing the parent id
+   */
+  create(body: PromptCreateParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.post('/prompt', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get entire prompt with option to include metadata
+   */
+  retrieve(
+    id: string,
+    query: PromptRetrieveParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<Prompt> {
+    return this._client.get(path`/prompt/${id}`, { query, ...options });
+  }
+
+  /**
+   * Get list of prompts with pagination
+   */
+  list(
+    query: PromptListParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<PromptListResponse> {
+    return this._client.get('/prompts', { query, ...options });
+  }
+
+  /**
+   * Delete prompt
+   */
+  delete(id: string, options?: RequestOptions): APIPromise<void> {
+    return this._client.delete(path`/prompt/${id}`, {
+      ...options,
+      headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Get prompt content
+   */
+  retrieveContent(
+    id: string,
+    query: PromptRetrieveContentParams | null | undefined = {},
+    options?: RequestOptions,
+  ): APIPromise<string> {
+    return this._client.get(path`/prompt/${id}/content`, {
+      query,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+
+  /**
+   * Update prompt metadata
+   */
+  updateMetadata(body: PromptUpdateMetadataParams, options?: RequestOptions): APIPromise<string> {
+    return this._client.put('/prompt/metadata', {
+      body,
+      ...options,
+      headers: buildHeaders([{ Accept: 'text/plain' }, options?.headers]),
+    });
+  }
+}
+
+export interface Prompt {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * The creation date of the prompt
+   */
+  created_at: number;
+
+  /**
+   * The parent of the prompt
+   */
+  parent: string;
+
+  /**
+   * The version of the prompt
+   */
+  version: number;
+
+  /**
+   * Whether the prompt is archived
+   */
+  archived?: boolean | null;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The metadata of the prompt
+   */
+  metadata?: Prompt.Metadata | null;
+}
+
+export namespace Prompt {
+  /**
+   * The metadata of the prompt
+   */
+  export interface Metadata {
+    /**
+     * Category of the prompt ie React, typescript, etc.
+     */
+    category?: string | null;
+
+    /**
+     * Description of the prompt
+     */
+    description?: string | null;
+
+    /**
+     * Name of the prompt
+     */
+    name?: string | null;
+
+    /**
+     * Tags of the prompt ie [react, typescript, etc.]
+     */
+    tags?: Array<string> | null;
+  }
+}
+
+export type PromptCreateResponse = string;
+
+export type PromptListResponse = Array<Prompt>;
+
+export type PromptRetrieveContentResponse = string;
+
+export type PromptUpdateMetadataResponse = string;
+
+export interface PromptCreateParams {
+  /**
+   * The content of the prompt
+   */
+  content: string;
+
+  /**
+   * Whether the prompt is being branched
+   */
+  branched?: boolean | null;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The parent of the prompt. If its a new prompt with no lineage, this should be
+   * None.
+   */
+  parent?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export interface PromptRetrieveParams {
+  /**
+   * Whether to include metadata in the response
+   */
+  metadata?: boolean;
+}
+
+export interface PromptListParams {
+  /**
+   * The category of the prompts to return
+   */
+  category?: string;
+
+  /**
+   * The number of prompts to return. Default is 10.
+   */
+  limit?: number;
+
+  /**
+   * The pagination offset to start from (0-based). Default is 0.
+   */
+  offset?: number;
+}
+
+export interface PromptRetrieveContentParams {
+  /**
+   * Latest version of the prompt
+   */
+  latest?: boolean;
+}
+
+export interface PromptUpdateMetadataParams {
+  /**
+   * The id of the prompt
+   */
+  id: string;
+
+  /**
+   * The category of the prompt
+   */
+  category?: string | null;
+
+  /**
+   * The description of the prompt
+   */
+  description?: string | null;
+
+  /**
+   * The name of the prompt
+   */
+  name?: string | null;
+
+  /**
+   * The tags of the prompt
+   */
+  tags?: Array<string> | null;
+}
+
+export declare namespace Prompts {
+  export {
+    type Prompt as Prompt,
+    type PromptCreateResponse as PromptCreateResponse,
+    type PromptListResponse as PromptListResponse,
+    type PromptRetrieveContentResponse as PromptRetrieveContentResponse,
+    type PromptUpdateMetadataResponse as PromptUpdateMetadataResponse,
+    type PromptCreateParams as PromptCreateParams,
+    type PromptRetrieveParams as PromptRetrieveParams,
+    type PromptListParams as PromptListParams,
+    type PromptRetrieveContentParams as PromptRetrieveContentParams,
+    type PromptUpdateMetadataParams as PromptUpdateMetadataParams,
+  };
+}
+
+
+Extra: 
+const prompt = await client.prompts.create({ content: 'content' });
+
+Request & Response types
+
+This library includes TypeScript definitions for all request params and response fields. You may import and use them like so:
+
+import SystemPromptStorage from 'system-prompt-storage';
+
+const client = new SystemPromptStorage({
+  apiKey: process.env['SYSTEM_PROMPT_STORAGE_API_KEY'], // This is the default and can be omitted
+});
+
+const params: SystemPromptStorage.PromptCreateParams = { content: 'content' };
+const prompt: string = await client.prompts.create(params);
+
+Documentation for each method, request param, and response field are available in docstrings and will appear on hover in most modern editors.
+Handling errors
+
+When the library is unable to connect to the API, or if the API returns a non-success status code (i.e., 4xx or 5xx response), a subclass of APIError will be thrown:
+
+const prompt = await client.prompts.create({ content: 'content' }).catch(async (err) => {
+  if (err instanceof SystemPromptStorage.APIError) {
+    console.log(err.status); // 400
+    console.log(err.name); // BadRequestError
+    console.log(err.headers); // {server: 'nginx', ...}
+  } else {
+    throw err;
+  }
+});
+
+Error codes are as follows:
+Status Code 	Error Type
+400 	BadRequestError
+401 	AuthenticationError
+403 	PermissionDeniedError
+404 	NotFoundError
+422 	UnprocessableEntityError
+429 	RateLimitError
+>=500 	InternalServerError
+N/A 	APIConnectionError
+Retries
+
+Certain errors will be automatically retried 2 times by default, with a short exponential backoff. Connection errors (for example, due to a network connectivity problem), 408 Request Timeout, 409 Conflict, 429 Rate Limit, and >=500 Internal errors will all be retried by default.
+
+You can use the maxRetries option to configure or disable this:
+
+// Configure the default for all requests:
+const client = new SystemPromptStorage({
+  maxRetries: 0, // default is 2
+});
+
+// Or, configure per-request:
+await client.prompts.create({ content: 'content' }, {
+  maxRetries: 5,
+});
+
+Timeouts
+
+Requests time out after 1 minute by default. You can configure this with a timeout option:
+
+// Configure the default for all requests:
+const client = new SystemPromptStorage({
+  timeout: 20 * 1000, // 20 seconds (default is 1 minute)
+});
+
+// Override per-request:
+await client.prompts.create({ content: 'content' }, {
+  timeout: 5 * 1000,
+});
+
+On timeout, an APIConnectionTimeoutError is thrown.
+
+Note that requests which time out will be retried twice by default.

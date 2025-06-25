@@ -1,4 +1,5 @@
 import { ApiEndpoint } from "~/components/docs-components";
+import { codeSnippets } from "./code-snippets";
 
 export default function DeleteApiPage() {
 	return (
@@ -16,6 +17,7 @@ export default function DeleteApiPage() {
 					},
 				]}
 				responseType="200 - Successfully deleted prompt | 404 - Prompt does not exist | 500 - Internal server error"
+				codeSnippets={codeSnippets.deletePrompt}
 			/>
 		</div>
 	);
